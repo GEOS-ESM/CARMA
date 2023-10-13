@@ -2,10 +2,10 @@
 # Jamison A. Smith, AKA JAS
 # April 26, 2007
 
-FORTRAN =	ifort
+#FORTRAN =	ifort
 #FORTRAN =	pgf90
 #FORTRAN =	pathf90
-#FORTRAN =	gfortran
+FORTRAN =	gfortran
 #FORTRAN =	g95
 #FORTRAN =	xlf90
 
@@ -66,6 +66,13 @@ ifeq ($(FORTRAN),g95)
   LDFLAGS = $(FFLAGS)
 endif
 
+# Add options for the gfortran compiler.
+ifeq ($(FORTRAN),gfortran)
+	FFLAGS += -ffree-line-length-none
+	FFLAGS += -fPIC
+	LDFLAGS = $(FFLAGS)
+endif
+
 # Add options for the IBM XL Fortran compiler.
 #
 # NOTE: It doesn't support float to zero.
@@ -90,7 +97,7 @@ endif
 %.html : %.F90 ; $(F90DOC) -cs $<
 
 # Add the directories where the source files are located.
-VPATH := ../../source/base ../../tests
+VPATH := ../../source/base ../../tests ../../interfaces
 
 # These makefiles have the object lists and dependence information
 # for the respective components.
@@ -104,7 +111,7 @@ include ../../tests/Makefile
 CARMA.exe : $(CARMA_OBJ) carma_test.o carma_testutils.o atmosphere_mod.o
 	$(FORTRAN) $(LDFLAGS) -o CARMA.exe carma_test.o carma_testutils.o atmosphere_mod.o $(CARMA_OBJ)
 FALLTEST.exe : $(CARMA_OBJ) carma_falltest.o carma_testutils.o atmosphere_mod.o
-	$(FORTRAN) $(LDFLAGS) -no_pie -o FALLTEST.exe carma_falltest.o carma_testutils.o atmosphere_mod.o $(CARMA_OBJ)
+	$(FORTRAN) $(LDFLAGS) -no-pie -o FALLTEST.exe carma_falltest.o carma_testutils.o atmosphere_mod.o $(CARMA_OBJ)
 SIGMAFALLTEST.exe : $(CARMA_OBJ) carma_sigmafalltest.o carma_testutils.o atmosphere_mod.o
 	$(FORTRAN) $(LDFLAGS) -o SIGMAFALLTEST.exe carma_sigmafalltest.o carma_testutils.o atmosphere_mod.o $(CARMA_OBJ)
 COAGTEST.exe : $(CARMA_OBJ) carma_coagtest.o carma_testutils.o atmosphere_mod.o
@@ -143,18 +150,22 @@ SCFALLTEST.exe : $(CARMA_OBJ) carma_scfalltest.o carma_testutils.o atmosphere_mo
 	$(FORTRAN) $(LDFLAGS) -o SCFALLTEST.exe carma_scfalltest.o carma_testutils.o atmosphere_mod.o $(CARMA_OBJ)
 SULFATETEST.exe : $(CARMA_OBJ) carma_sulfatetest.o carma_testutils.o atmosphere_mod.o
 	$(FORTRAN) $(LDFLAGS) -o SULFATETEST.exe carma_sulfatetest.o carma_testutils.o atmosphere_mod.o $(CARMA_OBJ)
+parma_box : $(CARMA_OBJ) atmosphere_mod.o
+	f2py -c --f90flags=-ffree-line-length-none ../../interfaces/carma_box.F90 atmosphere_mod.o $(CARMA_OBJ) -m carma_box --f2cmap .f2py_f2cmap
+	cp ../../interfaces/python/parma_box.py .
+	cp ../../interfaces/python/parma_box.ipynb .
 
 # Compile everything.
 all : FALLTEST.exe COAGTEST.exe BCOCTEST.exe BC2GTEST.exe GROWTEST.exe INITTEST.exe \
 MIETEST.exe NUCTEST.exe SIGMAFALLTEST.exe SWELLTEST.exe VDIFTEST.exe DRYDEPTEST.exe \
 SIGMADRYDEPTEST.exe PHEATTEST.exe SCFALLTEST.exe CARMA.exe GROWSUBTEST.exe \
-SULFATETEST.exe NUC2TEST.exe GROWINTEST.exe GROWCLRTEST.exe
+SULFATETEST.exe NUC2TEST.exe GROWINTEST.exe GROWCLRTEST.exe carma_box
 
 # Compile all of the documentation.
 doc : $(CARMA_DOC) $(TEST_DOC)
 
 clean:
-	/bin/rm -f *.o *.mod *.exe *.txt *.html
+	/bin/rm -f *.o *.mod *.exe *.txt *.html *.py *.ipynb *.so
 
 # The Mac creates .DS_Store files that we don't want in the tar file, so
 # exclude them.

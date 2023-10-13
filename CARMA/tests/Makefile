@@ -11,7 +11,7 @@ TEST_OBJ = carma_bcoctest.o carma_bc2gtest.o carma_coagtest.o carma_drydeptest.o
 carma_growtest.o carma_inittest.o carma_mietest.o carma_nuctest.o \
 carma_pheattest.o carma_sigmadrydeptest.o carma_sigmafalltest.o carma_swelltest.o \
 carma_vdiftest.o carma_test.o atmosphere_mod.o carma_scfalltest.o carma_growsubtest.o \
-carma_growintest.o
+carma_growintest.o carma_box.o
 
 TEST_DOC = carma_bcoctest.html carma_bc2gtest.html carma_coagtest.html carma_drydeptest.html \
 carma_falltest.html carma_growtest.html carma_inittest.html carma_mietest.html carma_nuctest.html \
@@ -29,6 +29,9 @@ carma_bcoctest.o : carma_bcoctest.F90 atmosphere_mod.mod carma_mod.mod carma_con
 	$(FORTRAN) $(FFLAGS) -c $<
 	
 carma_bc2gtest.o : carma_bc2gtest.F90 atmosphere_mod.mod carma_mod.mod carma_constants_mod.mod carma_precision_mod.mod 
+	$(FORTRAN) $(FFLAGS) -c $<
+
+carma_box.o : carma_box.F90 atmosphere_mod.mod carma_mod.mod carma_constants_mod.mod carma_precision_mod.mod 
 	$(FORTRAN) $(FFLAGS) -c $<
 	
 carma_coagtest.o : carma_coagtest.F90 atmosphere_mod.mod carma_mod.mod carma_constants_mod.mod carma_precision_mod.mod 

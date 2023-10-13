@@ -47,6 +47,12 @@ mkdir -p $blddir
 # Copy the makefile to the build directory.
 cp Makefile $blddir/Makefile
 
+# Copy python tools into the build directory
+cp -r tools $blddir/carma_tools
+
+# Create fortran to c mappings for python
+echo "dict(real=dict(f='double'))" > $blddir/.f2py_f2cmap
+
 # In MacOSX, the tar command will try to store off the resource fork as an
 # extra file which is the same name as the original file with a ._ prefix.
 # This flag stops that behavior
