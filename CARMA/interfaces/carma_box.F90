@@ -15,10 +15,10 @@
 !! @author Parker Case
 !! @version 2023/10/10: Updated for f2py setup
 !!          2023/04/02: First crack, using files for passing parameters
-
+!!
 !! Just have one grid box. Allow for all sulfate processes:
 !!   nucleation, condenstation, coagulation, settling.
-subroutine carma_box(nbin, rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt)
+subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt, constant_h2so4, nbin)
   use carma_precision_mod 
   use carma_constants_mod 
   use carma_enums_mod 
@@ -85,6 +85,7 @@ subroutine carma_box(nbin, rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, d
   real(kind=f), allocatable   :: lon(:,:)
 
   integer      :: nbin, nt
+  logical      :: constant_h2so4
   real(kind=f) :: rmrat, rmin, rhop, dt
   real(kind=f) :: p_0, zc_0, t_0, zl_0, h2o_0, h2so4_0
   real(kind=f) :: mmr_0(nbin)
@@ -287,8 +288,6 @@ subroutine carma_box(nbin, rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, d
       if (rc /=0) stop "    *** CARMASTATE_GetState FAILED ***"
 
       ! Get the updated bin mmr.
-      ! Get the updated bin mmr.
-
       do ielem = 1, NELEM
         call CARMAELEMENT_Get(carma, ielem, rc, igroup=igroup, shortname=sname)
 
@@ -308,6 +307,11 @@ subroutine carma_box(nbin, rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, d
         satice=satice(:,iy,ix,igas))
         if (rc /=0) stop "    *** CARMASTATE_GetGas FAILED ***"
       end do
+
+      ! Replace H2SO4 if constant_h2so4
+      if (constant_h2so4) then
+          mmr_gas(:,:,:,2)  = h2so4_0     ! H2SO4
+      end if
 
       lastsub = nsubsteps
       lastret = nretries

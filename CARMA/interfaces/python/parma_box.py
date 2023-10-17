@@ -21,6 +21,7 @@ t     = 220 # temperature (kelvin)
 p     = 2400 # pressure (bar)
 h2o   = 125e-6 # H2O mmr (kg/kg)
 h2so4 = 4.7e-10 # H2SO4 mmr (kg/kg)
+constant_h2so4 = False # Keep H2SO4 at initial value?
 su = np.asarray(
      [4.2579942e-28, 1.5634370e-27, 1.1281235e-26, 7.5493089e-24, 4.6745146e-22,
       1.1954208e-20, 1.5612010e-19, 1.3430505e-18, 2.1747372e-17, 1.5991898e-15,
@@ -38,7 +39,7 @@ rhop = 1.923 # g cm-3
 
 # Run the model!
 time_0 = perf_counter()
-carma_box(rmrat, rmin, rhop, t, p, h2so4, h2o, su, dt, nt, nbins)
+carma_box(rmrat, rmin, rhop, t, p, h2so4, h2o, su, dt, nt, constant_h2so4)
 time_1 = perf_counter()
 print('CARMA took ' + str(time_1 - time_0) + ' seconds to run '
       + str(nt) + ' timesteps.')
