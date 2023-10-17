@@ -9,11 +9,12 @@
 !!   SU MMR Bins SU001...SU024
 !!   28 input variables
 !!
-!! TODO: Add more than one timestep
-!!       Add custom particle & bin properties
+!! TODO: 
 !!
 !! @author Parker Case
-!! @version 2023/10/10: Updated for f2py setup
+!! @version 2023/10/17: Added custom particle properties and variable 
+!!                        timesteps
+!!          2023/10/10: Updated for f2py setup
 !!          2023/04/02: First crack, using files for passing parameters
 !!
 !! Just have one grid box. Allow for all sulfate processes:
