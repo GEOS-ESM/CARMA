@@ -150,10 +150,13 @@ SCFALLTEST.exe : $(CARMA_OBJ) carma_scfalltest.o carma_testutils.o atmosphere_mo
 	$(FORTRAN) $(LDFLAGS) -o SCFALLTEST.exe carma_scfalltest.o carma_testutils.o atmosphere_mod.o $(CARMA_OBJ)
 SULFATETEST.exe : $(CARMA_OBJ) carma_sulfatetest.o carma_testutils.o atmosphere_mod.o
 	$(FORTRAN) $(LDFLAGS) -o SULFATETEST.exe carma_sulfatetest.o carma_testutils.o atmosphere_mod.o $(CARMA_OBJ)
-parma_box : $(CARMA_OBJ) atmosphere_mod.o
-	f2py -c --f90flags=-ffree-line-length-none ../../interfaces/carma_box.F90 atmosphere_mod.o $(CARMA_OBJ) -m carma_box --f2cmap .f2py_f2cmap
+carma_box : $(CARMA_OBJ) atmosphere_mod.o
+	python3 -m numpy.f2py -c --f90flags=-ffree-line-length-none ../../interfaces/carma_box.F90 atmosphere_mod.o $(CARMA_OBJ) -m carma_box --f2cmap .f2py_f2cmap
 	cp ../../interfaces/python/parma_box.py .
 	cp ../../interfaces/python/parma_box.ipynb .
+carma_column : $(CARMA_OBJ) atmosphere_mod.o
+	python3 -m numpy.f2py -c --f90flags=-ffree-line-length-none ../../interfaces/carma_column.F90 atmosphere_mod.o $(CARMA_OBJ) -m carma_column --f2cmap .f2py_f2cmap
+	cp ../../interfaces/python/parma_column.py .
 
 # Compile everything.
 all : FALLTEST.exe COAGTEST.exe BCOCTEST.exe BC2GTEST.exe GROWTEST.exe INITTEST.exe \

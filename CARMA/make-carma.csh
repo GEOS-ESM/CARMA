@@ -50,6 +50,9 @@ cp Makefile $blddir/Makefile
 # Copy python tools into the build directory
 cp -r tools $blddir/carma_tools
 
+# Make sure we can call f2py
+alias f2py="python3 -m numpy.f2py"
+
 # Create fortran to c mappings for python
 echo "dict(real=dict(f='double'))" > $blddir/.f2py_f2cmap
 

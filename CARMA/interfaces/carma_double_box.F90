@@ -18,7 +18,7 @@
 !!
 !! Just have one grid box. Allow for all sulfate processes:
 !!   nucleation, condenstation, coagulation, settling.
-subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt, constant_h2so4, nbin)
+subroutine carma_column(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt, constant_h2so4, nbin, mmr_out)
   use carma_precision_mod 
   use carma_constants_mod 
   use carma_enums_mod 
@@ -34,7 +34,7 @@ subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt,
 
   integer, parameter        :: NX           = 1
   integer, parameter        :: NY           = 1
-  integer, parameter        :: NZ           = 1
+  integer, parameter        :: NZ           = 2
   integer, parameter        :: NZP1         = NZ+1
   integer, parameter        :: NELEM        = 1
   integer, parameter        :: NGROUP       = 1
@@ -47,7 +47,7 @@ subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt,
   ! because of the satbility issues.
   real(kind=f), parameter   :: deltax = 100._f
   real(kind=f), parameter   :: deltay = 100._f
-  real(kind=f), parameter   :: deltaz = 100._f
+  real(kind=f), parameter   :: deltaz = 1000._f
   real(kind=f), parameter   :: zmin   = 0._f
 
   integer, parameter        :: I_H2SO4  = 1
@@ -87,8 +87,14 @@ subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt,
   integer      :: nbin, nt
   logical      :: constant_h2so4
   real(kind=f) :: rmrat, rmin, rhop, dt
-  real(kind=f) :: p_0, zc_0, t_0, zl_0, h2o_0, h2so4_0
-  real(kind=f) :: mmr_0(nbin)
+  real(kind=f) :: p_0(NZ)
+  real(kind=f) :: zc_0(NZ)
+  real(kind=f) :: t_0(NZ)
+  real(kind=f) :: zl_0(NZ)
+  real(kind=f) :: h2o_0(NZ)
+  real(kind=f) :: h2so4_0(NZ)
+  real(kind=f) :: mmr_0(NZ,nbin)
+  real(kind=f), intent(out) :: mmr_out(NZ,nbin)
 
   integer               :: outid
   character(len=80)     :: binName(NELEM, nbin)
@@ -114,6 +120,7 @@ subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt,
   integer               :: bins(nbin)
 
   real(kind=f)          :: nretries
+  real(kind=f)          :: ireal
   real(kind=f)          :: lastret = 0._f
 
   real(kind=f)          :: time
@@ -147,9 +154,6 @@ subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt,
   call CARMAGROUP_Create(carma, 1, "sulfate", rmin, rmrat, I_SPHERE, 1._f, .false., &
                         rc, irhswell=I_WTPCT_H2SO4, do_drydep=.false., &
                         shortname="SULF", do_vtran=.true., is_sulfate=.true.)
-!  call CARMAGROUP_Create(carma, 1, "sulfate", rmin, rmrat, I_SPHERE, 1._f, .false., &
-!                        rc, irhswell=I_WTPCT_H2SO4, do_drydep=.false., &
-!                        shortname="SULF", is_sulfate=.true.)
   if (rc /=0) stop "    *** CARMAGROUP_Create FAILED ***"
   
   ! Define the elements
@@ -169,17 +173,14 @@ subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt,
   call CARMA_AddGrowth(carma, 1, 2, rc)   ! set H2SO4 to be the condensing gas
   if (rc /=0) stop "    *** CARMA_AddGrowth FAILED ***"
 
-   call CARMA_AddNucleation(carma, 1, 1, I_HOMNUC, 0._f, rc, igas=2)
+  call CARMA_AddNucleation(carma, 1, 1, I_HOMNUC, 0._f, rc, igas=2)
   if (rc /=0) stop "    *** CARMA_AddNucleation FAILED ***"
 
-   call CARMA_AddCoagulation(carma, 1, 1, 1, I_COLLEC_FUCHS, rc)
+  call CARMA_AddCoagulation(carma, 1, 1, 1, I_COLLEC_FUCHS, rc)
   if (rc /=0) stop "    *** CARMA_AddCoagulation FAILED ***"
 
 
- ! call CARMA_Initialize(carma, rc, do_vtran=.true., do_grow=.true., do_coag=.true., &
- !         do_substep=.true., do_thermo=.true., maxretries=16, maxsubsteps=32, dt_threshold=1._f)
-
-  call CARMA_Initialize(carma, rc, do_grow=.true., do_coag=.true., &
+  call CARMA_Initialize(carma, rc, do_vtran=.true., do_grow=.true., do_coag=.true., &
           do_substep=.true., do_thermo=.true., maxretries=16, maxsubsteps=32, dt_threshold=1._f)
   if (rc /=0) stop "    *** CARMA_Initialize FAILED ***"
   
@@ -204,14 +205,16 @@ subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt,
 
   ! Vertical center
   do i = 1, NZ
-    zc(i,:,:) = zmin + (deltaz * (i - 0.5_f))
+    ireal = real(i)
+    zc(i,1,1) = zmin + (deltaz * (ireal - 0.5_f))
   end do
   
   call GetStandardAtmosphere(zc, p=p, t=t)
 
   ! Vertical edge
   do i = 1, NZP1
-    zl(i,:,:) = zmin + ((i - 1) * deltaz)
+    ireal = real(i)
+    zl(i,1,1) = zmin + ((ireal - 1) * deltaz)
   end do
   call GetStandardAtmosphere(zl, p=pl)
 
@@ -220,25 +223,22 @@ subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt,
   end do
 
   ! Initial Conditions:
-  p(1,:,:)         = p_0
-  zc(1,:,:)        = zl_0
-  t(1,:,:)         = t_0
-  zl(1,:,:)        = zl_0 - deltaz
-  zl(2,:,:)        = zl_0 + deltaz
-  rho(1,:,:)       = (p_0 * 10._f) / (R_AIR * t_0) * (1e-3_f * 1e6_f)
-  pl(1,:,:)        = p_0 - (zl(1,:,:) - zc(1,:,:)) * rho(1,:,:) * (GRAV / 100._f)
-  pl(2,:,:)        = p_0 - (zl(2,:,:) - zc(1,:,:)) * rho(1,:,:) * (GRAV / 100._f)
+  p(:,1,1)         = p_0
+  t(:,1,1)         = t_0
+  rho(:,1,1)       = (p_0 * 10._f) / (R_AIR * t_0) * (1e-3_f * 1e6_f)
+  pl(1,1,1)        = p_0(1) - (zl(1,1,1) - zc(1,1,1)) * rho(1,1,1) * (GRAV / 100._f)
+  pl(2:,1,1)        = p_0 - (zl(2:,1,1) - zc(1:,1,1)) * rho(1,1,1) * (GRAV / 100._f)
 
   ! Initial H2O and H2SO4 concentrations
-  mmr_gas(:,:,:,1)  = h2o_0     ! H2O
-  mmr_gas(:,:,:,2)  = h2so4_0     ! H2SO4
+  mmr_gas(:,1,1,1)  = h2o_0     ! H2O
+  mmr_gas(:,1,1,2)  = h2so4_0     ! H2SO4
 
   satliq(:,:,:,:)   = -1._f
   satice(:,:,:,:)   = -1._f
   
   ! Initial sulfate concentration
   do ibin = 1,nbin
-    mmr(:,:,:,:,ibin) = mmr_0(ibin)
+    mmr(:,1,1,1,ibin) = mmr_0(:,ibin)
   end do
   
   t_orig(1,:,:) = t(1,:,:)
@@ -316,7 +316,7 @@ subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt,
 
       ! Replace H2SO4 if constant_h2so4
       if (constant_h2so4) then
-          mmr_gas(:,:,:,2)  = h2so4_0     ! H2SO4
+          mmr_gas(:,1,1,2)  = h2so4_0     ! H2SO4
       end if
 
       lastsub = nsubsteps
@@ -329,9 +329,8 @@ subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt,
   h2so4_0 = mmr_gas(1,1,1,2)
   t_0 = t(1,1,1)
   do ibin = 1,nbin
-    mmr_0(ibin) = mmr(1,1,1,1,ibin)
+    mmr_out(:,ibin) = mmr(:,1,1,1,ibin)
   end do
-  PRINT *, mmr
 
   ! Cleanup the carma state objects
   call CARMASTATE_Destroy(cstate, rc)
