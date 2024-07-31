@@ -19,7 +19,7 @@
 !!
 !! Just have one grid box. Allow for all sulfate processes:
 !!   nucleation, condenstation, coagulation, settling.
-subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt, constant_h2so4, nbin)
+subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2so4_old, h2o_0, h2o_old, mmr_0, dt, nt, constant_h2so4, retries, substeps, supersat, dsthresh, nbin)
   use carma_precision_mod 
   use carma_constants_mod 
   use carma_enums_mod 
@@ -72,7 +72,7 @@ subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt,
   
   real(kind=f), allocatable   :: mmr(:,:,:,:,:)
   real(kind=f), allocatable   :: mmr_gas(:,:,:,:)
-  real(kind=f), allocatable   :: new_gas(:,:,:,:)
+  real(kind=f), allocatable   :: mmr_gas_old(:,:,:,:)
   real(kind=f), allocatable   :: satliq(:,:,:,:)
   real(kind=f), allocatable   :: satice(:,:,:,:)
   
@@ -85,10 +85,11 @@ subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt,
   real(kind=f), allocatable   :: lat(:,:)
   real(kind=f), allocatable   :: lon(:,:)
 
-  integer      :: nbin, nt
+  integer      :: nbin, nt, retries
   logical      :: constant_h2so4
-  real(kind=f) :: rmrat, rmin, rhop, dt
-  real(kind=f) :: p_0, zc_0, t_0, zl_0, h2o_0, h2so4_0
+  real(kind=f) :: rmrat, rmin, rhop, dt, zc_0, zl_0, dsthresh
+  real(kind=f) :: p_0(1), t_0(1), h2o_0(1), h2so4_0(1), substeps(1), supersat(1)
+  real(kind=f) :: h2o_old(1), h2so4_old(1)
   real(kind=f) :: mmr_0(nbin)
 
   integer               :: outid
@@ -127,7 +128,7 @@ subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt,
            t(NZ,NY,NX),rho(NZ,NY,NX))
   allocate(mmr(NZ,NY,NX,NELEM,nbin))
   allocate(mmr_gas(NZ,NY,NX,NGAS))
-  allocate(new_gas(NZ,NY,NX,NGAS))
+  allocate(mmr_gas_old(NZ,NY,NX,NGAS))
   allocate(satliq(NZ,NY,NX,NGAS))
   allocate(satice(NZ,NY,NX,NGAS))
   allocate(r(nbin))
@@ -146,7 +147,7 @@ subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt,
   carma_ptr => carma
 
   call CARMAGROUP_Create(carma, 1, "sulfate", rmin, rmrat, I_SPHERE, 1._f, .false., &
-                        rc, irhswell=I_WTPCT_H2SO4, do_drydep=.false., &
+                        rc, irhswell=I_WTPCT_H2SO4, do_drydep=.true., &
                         shortname="SULF", is_sulfate=.true.)
   if (rc /=0) stop "    *** CARMAGROUP_Create FAILED ***"
   
@@ -156,11 +157,11 @@ subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt,
   
   ! Define the gases
   call CARMAGAS_Create(carma, 1, "Water Vapor", WTMOL_H2O, I_VAPRTN_H2O_MURPHY2005, &
-    I_GCOMP_H2O, rc, shortname = "H2O", dgc_threshold=0.1_f, ds_threshold=0.1_f)
+    I_GCOMP_H2O, rc, shortname = "H2O")!, dgc_threshold=0.1_f, ds_threshold=0.1_f)
   if (rc /=0) stop "    *** CARMAGAS_Create FAILED ***"
 
   call CARMAGAS_Create(carma, 2, "Sulpheric Acid", 98.078479_f, I_VAPRTN_H2SO4_AYERS1980, &
-    I_GCOMP_H2SO4, rc, shortname = "H2SO4", dgc_threshold=0.1_f, ds_threshold=0.1_f)
+    I_GCOMP_H2SO4, rc, shortname = "H2SO4", ds_threshold=dsthresh)!, dgc_threshold=0.1_f, ds_threshold=0.1_f)
   if (rc /=0) stop "    *** CARMAGAS_Create FAILED ***"
 
   ! Setup the CARMA processes to exercise
@@ -175,7 +176,7 @@ subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt,
 
 
   call CARMA_Initialize(carma, rc, do_grow=.true., do_coag=.true., do_substep=.true., &
-          do_thermo=.true., maxretries=16, maxsubsteps=32, dt_threshold=1._f)
+      do_pfast=.true., do_thermo=.true., maxretries=retries, maxsubsteps=32)!, dt_threshold=1._f)
   if (rc /=0) stop "    *** CARMA_Initialize FAILED ***"
   
   ! For simplicity of setup, do a case with Cartesian coordinates,
@@ -215,18 +216,20 @@ subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt,
   end do
 
   ! Initial Conditions:
-  p(1,:,:)         = p_0
+  p(1,:,:)         = p_0(1)
   zc(1,:,:)        = zl_0
-  t(1,:,:)         = t_0
+  t(1,:,:)         = t_0(1)
   zl(1,:,:)        = zl_0 - deltaz
   zl(2,:,:)        = zl_0 + deltaz
-  rho(1,:,:)       = (p_0 * 10._f) / (R_AIR * t_0) * (1e-3_f * 1e6_f)
-  pl(1,:,:)        = p_0 - (zl(1,:,:) - zc(1,:,:)) * rho(1,:,:) * (GRAV / 100._f)
-  pl(2,:,:)        = p_0 - (zl(2,:,:) - zc(1,:,:)) * rho(1,:,:) * (GRAV / 100._f)
+  rho(1,:,:)       = (p_0(1) * 10._f) / (R_AIR * t_0(1)) * (1e-3_f * 1e6_f)
+  pl(1,:,:)        = p_0(1) - (zl(1,:,:) - zc(1,:,:)) * rho(1,:,:) * (GRAV / 100._f)
+  pl(2,:,:)        = p_0(1) - (zl(2,:,:) - zc(1,:,:)) * rho(1,:,:) * (GRAV / 100._f)
 
   ! Initial H2O and H2SO4 concentrations
-  mmr_gas(:,:,:,1)  = h2o_0     ! H2O
-  mmr_gas(:,:,:,2)  = h2so4_0     ! H2SO4
+  mmr_gas(:,:,:,1)  = h2o_0(1)     ! H2O
+  mmr_gas(:,:,:,2)  = h2so4_0(1)     ! H2SO4
+  mmr_gas_old(:,:,:,1) = h2o_old(1)
+  mmr_gas_old(:,:,:,2) = h2so4_old(1)
 
   satliq(:,:,:,:)   = -1._f
   satice(:,:,:,:)   = -1._f
@@ -266,11 +269,9 @@ subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt,
       !
       ! For substepping to do anything, during a step, the old an current
       ! gas mmrs or temperatures need to be different.
-      new_gas(:,iy,ix,:) = mmr_gas(:,iy,ix,:)
-
       do igas = 1, NGAS
-        call CARMASTATE_SetGas(cstate, igas, new_gas(:,iy,ix,igas), rc, &
-                mmr_old=mmr_gas(:,iy,ix,igas),&
+        call CARMASTATE_SetGas(cstate, igas, mmr_gas(:,iy,ix,igas), rc, &
+                mmr_old=mmr_gas_old(:,iy,ix,igas),&
                 satice_old=satice(:,iy,ix,igas), &
                 satliq_old=satliq(:,iy,ix,igas))
         if (rc /=0) stop "    *** CARMASTATE_SetGas FAILED ***"
@@ -302,6 +303,7 @@ subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt,
 
       ! Get the updated gas mmr.
       do igas = 1, NGAS
+        mmr_gas_old(:,iy,ix,igas) = mmr_gas(:,iy,ix,igas)
         call CARMASTATE_GetGas(cstate, igas, &
         mmr_gas(:,iy,ix,igas), rc, &
         satliq=satliq(:,iy,ix,igas), &
@@ -311,7 +313,7 @@ subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt,
 
       ! Replace H2SO4 if constant_h2so4
       if (constant_h2so4) then
-          mmr_gas(:,:,:,2)  = h2so4_0     ! H2SO4
+          mmr_gas(:,:,:,2)  = h2so4_0(1)     ! H2SO4
       end if
 
       lastsub = nsubsteps
@@ -320,9 +322,13 @@ subroutine carma_box(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt,
     end do   ! space loop
   end do ! time loop
 
-  h2o_0 = mmr_gas(1,1,1,1)
-  h2so4_0 = mmr_gas(1,1,1,2)
-  t_0 = t(1,1,1)
+  h2o_0(1) = mmr_gas(1,1,1,1)
+  h2so4_0(1) = mmr_gas(1,1,1,2)
+  h2o_old(1) = mmr_gas_old(1,1,1,1)
+  h2so4_old(1) = mmr_gas_old(1,1,1,2)
+  t_0(1) = t(1,1,1)
+  substeps(1) = lastsub
+  supersat(1) = satliq(1,1,1,2)
   do ibin = 1,nbin
     mmr_0(ibin) = mmr(1,1,1,1,ibin)
   end do

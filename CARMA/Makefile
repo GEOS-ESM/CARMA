@@ -32,6 +32,7 @@ ifeq ($(FORTRAN),ifort)
   
   # Open/MP
   FFLAGS += -qopenmp
+  FFLAGS += -openmp
   
   # The no_pie flags also the executable to work with idb.
   LDFLAGS = $(FFLAGS) -no_pie
@@ -70,6 +71,8 @@ endif
 ifeq ($(FORTRAN),gfortran)
 	FFLAGS += -ffree-line-length-none
 	FFLAGS += -fPIC
+	FFLAGS += -fopenmp
+	FFLAGS += -lgfortran
 	LDFLAGS = $(FFLAGS)
 endif
 
@@ -150,8 +153,8 @@ SCFALLTEST.exe : $(CARMA_OBJ) carma_scfalltest.o carma_testutils.o atmosphere_mo
 	$(FORTRAN) $(LDFLAGS) -o SCFALLTEST.exe carma_scfalltest.o carma_testutils.o atmosphere_mod.o $(CARMA_OBJ)
 SULFATETEST.exe : $(CARMA_OBJ) carma_sulfatetest.o carma_testutils.o atmosphere_mod.o
 	$(FORTRAN) $(LDFLAGS) -o SULFATETEST.exe carma_sulfatetest.o carma_testutils.o atmosphere_mod.o $(CARMA_OBJ)
-parma_box : $(CARMA_OBJ) atmosphere_mod.o
-	f2py -c --f90flags=-ffree-line-length-none ../../interfaces/carma_box.F90 atmosphere_mod.o $(CARMA_OBJ) -m carma_box --f2cmap .f2py_f2cmap
+parma_box : $(CARMA_OBJ) carma_box.o atmosphere_mod.o
+	f2py -c --fcompiler=gfortran --f90flags=-ffree-line-length-none -I. atmosphere_mod.o $(CARMA_OBJ) -m carma_box --f2cmap .f2py_f2cmap ../../interfaces/carma_box.F90
 	cp ../../interfaces/python/parma_box.py .
 	cp ../../interfaces/python/parma_box.ipynb .
 
@@ -159,7 +162,7 @@ parma_box : $(CARMA_OBJ) atmosphere_mod.o
 all : FALLTEST.exe COAGTEST.exe BCOCTEST.exe BC2GTEST.exe GROWTEST.exe INITTEST.exe \
 MIETEST.exe NUCTEST.exe SIGMAFALLTEST.exe SWELLTEST.exe VDIFTEST.exe DRYDEPTEST.exe \
 SIGMADRYDEPTEST.exe PHEATTEST.exe SCFALLTEST.exe CARMA.exe GROWSUBTEST.exe \
-SULFATETEST.exe NUC2TEST.exe GROWINTEST.exe GROWCLRTEST.exe carma_box
+SULFATETEST.exe NUC2TEST.exe GROWINTEST.exe GROWCLRTEST.exe parma_box
 
 # Compile all of the documentation.
 doc : $(CARMA_DOC) $(TEST_DOC)
