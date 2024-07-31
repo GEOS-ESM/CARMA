@@ -157,6 +157,9 @@ parma_box : $(CARMA_OBJ) carma_box.o atmosphere_mod.o
 	f2py -c --fcompiler=gfortran --f90flags=-ffree-line-length-none -I. atmosphere_mod.o $(CARMA_OBJ) -m carma_box --f2cmap .f2py_f2cmap ../../interfaces/carma_box.F90
 	cp ../../interfaces/python/parma_box.py .
 	cp ../../interfaces/python/parma_box.ipynb .
+carma_column : $(CARMA_OBJ) atmosphere_mod.o
+	python3 -m numpy.f2py -c --f90flags=-ffree-line-length-none ../../interfaces/carma_column.F90 atmosphere_mod.o $(CARMA_OBJ) -m carma_column --f2cmap .f2py_f2cmap
+	cp ../../interfaces/python/parma_column.py .
 
 # Compile everything.
 all : FALLTEST.exe COAGTEST.exe BCOCTEST.exe BC2GTEST.exe GROWTEST.exe INITTEST.exe \
