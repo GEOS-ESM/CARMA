@@ -24,9 +24,9 @@ from carma_tools.wetr import grow_v75
 # Simulation parameters
 ################################################################
 # Time and grid parameters
-nz = 30
-dt    = 900 # timestep (900 seconds (15 minutes))
-nt    = 768 # number of timesteps (8 days)
+nz       = 30 # number of (1km) layers
+dt       = 900 # timestep (900 seconds (15 minutes))
+nt       = 768 # number of timesteps (8 days)
 nt_carma = 1 # number carma timesteps per parma "timestep"
 
 # CARMA bin parameters
@@ -35,11 +35,11 @@ nbins = 24 # number of bins
 rmrat_su = 3.75125201 # mass ratio between bins
 rmin_su = 2.6686863e-8 # cm
 
-rmrat_mx = 3.75125201 # mass ratio between bins
-rmin_mx = 2.6686863e-8 # cm
+rmrat_mx = 2.2587828 # mass ratio between bins
+rmin_mx = 5.e-06 # cm
 
 rhop_su = 1.923 # g cm-3
-rhop_du = 1.923 # g cm-3
+rhop_du = 2.65 # g cm-3
 
 # Background atmospheric parameters
 h2o   = np.zeros(nz) + 1e-7 # H2O mmr (kg/kg)

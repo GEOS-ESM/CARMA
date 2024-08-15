@@ -157,16 +157,20 @@ parma_box : $(CARMA_OBJ) carma_box.o atmosphere_mod.o
 	f2py -c --fcompiler=gfortran --f90flags=-ffree-line-length-none -lgomp -I. atmosphere_mod.o $(CARMA_OBJ) -m carma_box --f2cmap .f2py_f2cmap ../../interfaces/carma_box.F90
 	cp ../../interfaces/python/parma_box.py .
 	cp ../../interfaces/python/parma_box.ipynb .
+	cp ../../interfaces/python/utils/*.py .
+	cp -r ../../interfaces/python/utils/carma_tools .
 parma_column : $(CARMA_OBJ) atmosphere_mod.o
 	f2py -c --fcompiler=gfortran --f90flags=-ffree-line-length-none -lgomp -I. atmosphere_mod.o $(CARMA_OBJ) -m carma_column --f2cmap .f2py_f2cmap ../../interfaces/carma_column.F90
 	#python3 -m numpy.f2py -c --f90flags=-ffree-line-length-none ../../interfaces/carma_column.F90 atmosphere_mod.o $(CARMA_OBJ) -m carma_column --f2cmap .f2py_f2cmap
 	cp ../../interfaces/python/parma_column.py .
 	cp ../../interfaces/python/utils/*.py .
+	cp -r ../../interfaces/python/utils/carma_tools .
 parma_column_dust : $(CARMA_OBJ) atmosphere_mod.o
 	f2py -c --fcompiler=gfortran --f90flags=-ffree-line-length-none -lgomp -I. atmosphere_mod.o $(CARMA_OBJ) -m carma_column_dust --f2cmap .f2py_f2cmap ../../interfaces/carma_column_dust.F90
 	#python3 -m numpy.f2py -c --f90flags=-ffree-line-length-none ../../interfaces/carma_column.F90 atmosphere_mod.o $(CARMA_OBJ) -m carma_column --f2cmap .f2py_f2cmap
 	cp ../../interfaces/python/parma_column_dust.py .
 	cp ../../interfaces/python/utils/*.py .
+	cp -r ../../interfaces/python/utils/carma_tools .
 
 # Compile everything.
 all : FALLTEST.exe COAGTEST.exe BCOCTEST.exe BC2GTEST.exe GROWTEST.exe INITTEST.exe \
@@ -178,7 +182,7 @@ SULFATETEST.exe NUC2TEST.exe GROWINTEST.exe GROWCLRTEST.exe parma_box
 doc : $(CARMA_DOC) $(TEST_DOC)
 
 clean:
-	/bin/rm -f *.o *.mod *.exe *.txt *.html *.py *.ipynb *.so
+	/bin/rm -f *.o *.mod *.exe *.txt *.html *.py *.ipynb *.so *.nc4
 
 # The Mac creates .DS_Store files that we don't want in the tar file, so
 # exclude them.
