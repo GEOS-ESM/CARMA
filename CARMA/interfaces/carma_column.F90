@@ -18,7 +18,7 @@
 !!
 !! Just have one grid box. Allow for all sulfate processes:
 !!   nucleation, condenstation, coagulation, settling.
-subroutine carma_column(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt, constant_h2so4, nbin, mmr_out, t_out, p_out, h2so4_out, h2o_out)
+subroutine carma_column(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, nt, constant_h2so4, nbin, nlayer, mmr_out, t_out, p_out, h2so4_out, h2o_out, rhoa_out, rh_out)
   use carma_precision_mod 
   use carma_constants_mod 
   use carma_enums_mod 
@@ -34,8 +34,6 @@ subroutine carma_column(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, 
 
   integer, parameter        :: NX           = 1
   integer, parameter        :: NY           = 1
-  integer, parameter        :: NZ           = 30
-  integer, parameter        :: NZP1         = NZ+1
   integer, parameter        :: NELEM        = 1
   integer, parameter        :: NGROUP       = 1
   integer, parameter        :: NSOLUTE      = 0
@@ -84,21 +82,23 @@ subroutine carma_column(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, 
   real(kind=f), allocatable   :: lat(:,:)
   real(kind=f), allocatable   :: lon(:,:)
 
-  integer      :: nbin, nt
+  integer      :: nbin, nt, nlayer
   logical      :: constant_h2so4
   real(kind=f) :: rmrat, rmin, rhop, dt
-  real(kind=f) :: p_0(NZ)
-  real(kind=f) :: zc_0(NZ)
-  real(kind=f) :: t_0(NZ)
-  real(kind=f) :: zl_0(NZ)
-  real(kind=f) :: h2o_0(NZ)
-  real(kind=f) :: h2so4_0(NZ)
-  real(kind=f) :: mmr_0(NZ,nbin)
-  real(kind=f), intent(out) :: mmr_out(NZ,nbin)
-  real(kind=f), intent(out) :: p_out(NZ)
-  real(kind=f), intent(out) :: t_out(NZ)
-  real(kind=f), intent(out) :: h2o_out(NZ)
-  real(kind=f), intent(out) :: h2so4_out(NZ)
+  real(kind=f) :: p_0(nlayer)
+  real(kind=f) :: zc_0(nlayer)
+  real(kind=f) :: t_0(nlayer)
+  real(kind=f) :: zl_0(nlayer)
+  real(kind=f) :: h2o_0(nlayer)
+  real(kind=f) :: h2so4_0(nlayer)
+  real(kind=f) :: mmr_0(nlayer,nbin)
+  real(kind=f), intent(out) :: mmr_out(nlayer,nbin)
+  real(kind=f), intent(out) :: p_out(nlayer)
+  real(kind=f), intent(out) :: t_out(nlayer)
+  real(kind=f), intent(out) :: rhoa_out(nlayer)
+  real(kind=f), intent(out) :: rh_out(nlayer)
+  real(kind=f), intent(out) :: h2o_out(nlayer)
+  real(kind=f), intent(out) :: h2so4_out(nlayer)
 
   integer               :: outid
   character(len=80)     :: binName(NELEM, nbin)
@@ -132,21 +132,21 @@ subroutine carma_column(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, 
   real(kind=f)          :: drh
 
   ! Allocate the arrays that we need for the model
-  allocate(xc(NZ,NY,NX), dx(NZ,NY,NX), yc(NZ,NY,NX), dy(NZ,NY,NX), &
-           zc(NZ,NY,NX), zl(NZP1,NY,NX), p(NZ,NY,NX), pl(NZP1,NY,NX), &
-           t(NZ,NY,NX),rho(NZ,NY,NX))
-  allocate(mmr(NZ,NY,NX,NELEM,nbin))
-  allocate(mmr_gas(NZ,NY,NX,NGAS))
-  allocate(new_gas(NZ,NY,NX,NGAS))
-  allocate(satliq(NZ,NY,NX,NGAS))
-  allocate(satice(NZ,NY,NX,NGAS))
+  allocate(xc(nlayer,NY,NX), dx(nlayer,NY,NX), yc(nlayer,NY,NX), dy(nlayer,NY,NX), &
+           zc(nlayer,NY,NX), zl(nlayer+1,NY,NX), p(nlayer,NY,NX), pl(nlayer+1,NY,NX), &
+           t(nlayer,NY,NX),rho(nlayer,NY,NX))
+  allocate(mmr(nlayer,NY,NX,NELEM,nbin))
+  allocate(mmr_gas(nlayer,NY,NX,NGAS))
+  allocate(new_gas(nlayer,NY,NX,NGAS))
+  allocate(satliq(nlayer,NY,NX,NGAS))
+  allocate(satice(nlayer,NY,NX,NGAS))
   allocate(r(nbin))
   allocate(rmass(nbin))
   allocate(lat(NY,NX), lon(NY,NX))
-  allocate(numberDensity(NZ,NY,NX))
-  allocate(r_wet(NZ,NY,NX))
-  allocate(rhop_wet(NZ,NY,NX))
-  allocate(t_orig(NZ,NY,NX),)
+  allocate(numberDensity(nlayer,NY,NX))
+  allocate(r_wet(nlayer,NY,NX))
+  allocate(rhop_wet(nlayer,NY,NX))
+  allocate(t_orig(nlayer,NY,NX),)
 
   ! Define the particle-grid extent of the CARMA test
   call CARMA_Create(carma, nbin, NELEM, NGROUP, NSOLUTE, NGAS, NWAVE, rc, &
@@ -208,7 +208,7 @@ subroutine carma_column(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, 
   end do
 
   ! Vertical center
-  do i = 1, NZ
+  do i = 1, nlayer
     ireal = real(i)
     zc(i,1,1) = zmin + (deltaz * (ireal - 0.5_f))
   end do
@@ -216,7 +216,7 @@ subroutine carma_column(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, 
   call GetStandardAtmosphere(zc, p=p, t=t)
 
   ! Vertical edge
-  do i = 1, NZP1
+  do i = 1, nlayer+1
     ireal = real(i)
     zl(i,1,1) = zmin + ((ireal - 1) * deltaz)
   end do
@@ -253,7 +253,7 @@ subroutine carma_column(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, 
     do ixy = 1, NX*NY
       ix = ((ixy-1) / NY) + 1
       iy = ixy - (ix-1)*NY
-      call CARMASTATE_Create(cstate, carma_ptr, time, dt, NZ, &
+      call CARMASTATE_Create(cstate, carma_ptr, time, dt, nlayer, &
                           I_CART, I_CART, lat(iy,ix), lon(iy,ix), &
                           xc(:,iy,ix), dx(:,iy,ix), &
                           yc(:,iy,ix), dy(:,iy,ix), &
@@ -294,7 +294,7 @@ subroutine carma_column(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, 
       call CARMASTATE_Get(cstate, rc, nsubstep=nsubsteps, nretry=nretries)
       if (rc /=0) stop "    *** CARMASTATE_Get FAILED ***"
 
-      call CARMASTATE_GetState(cstate, rc, t=t(:,iy,ix))
+      call CARMASTATE_GetState(cstate, rc, rhoa_wet=rhoa_out(:), t=t(:,iy,ix))
       if (rc /=0) stop "    *** CARMASTATE_GetState FAILED ***"
 
       ! Get the updated bin mmr.
@@ -331,6 +331,7 @@ subroutine carma_column(rmrat, rmin, rhop, t_0, p_0, h2so4_0, h2o_0, mmr_0, dt, 
 
   h2o_out = mmr_gas(:,1,1,1)
   h2so4_out = mmr_gas(:,1,1,2)
+  rh_out = satliq(:,1,1,1) * 100
   t_out = t(:,1,1)
   p_out = p(:,1,1)
   do ibin = 1,nbin
