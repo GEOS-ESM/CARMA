@@ -324,7 +324,7 @@ subroutine carma_column_dust(rmrat_su, rmrat_mx, rmin_su, rmin_mx, rhop_su, rhop
 
       ! Get the updated bin mmr.
       do ielem = 1, NELEM
-        call CARMAELEMENT_Get(carma, ielem, rc, igroup=igroup, shortname=sname)
+        call CARMAELEMENT_Get(carma, ielem, rc, shortname=sname)
 
         do ibin = 1, nbin
           call CARMASTATE_GetBin(cstate, ielem, ibin, mmr(:,iy,ix,ielem,ibin), rc, numberDensity=numberDensity(:,iy,ix), r_wet=r_wet(:,iy,ix), rhop_wet=rhop_wet(:,iy,ix))
