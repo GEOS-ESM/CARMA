@@ -169,6 +169,7 @@ parma_column_dust : $(CARMA_OBJ) atmosphere_mod.o
 	f2py -c --fcompiler=gfortran --f90flags=-ffree-line-length-none -lgomp -I. atmosphere_mod.o $(CARMA_OBJ) -m carma_column_dust --f2cmap .f2py_f2cmap ../../interfaces/carma_column_dust.F90
 	#python3 -m numpy.f2py -c --f90flags=-ffree-line-length-none ../../interfaces/carma_column.F90 atmosphere_mod.o $(CARMA_OBJ) -m carma_column --f2cmap .f2py_f2cmap
 	cp ../../interfaces/python/parma_column_dust.py .
+	cp ../../interfaces/python/parma_column_dust_analysis.py .
 	cp ../../interfaces/python/utils/*.py .
 	cp -r ../../carma_tools .
 
