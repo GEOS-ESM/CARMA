@@ -153,16 +153,15 @@ SCFALLTEST.exe : $(CARMA_OBJ) carma_scfalltest.o carma_testutils.o atmosphere_mo
 	$(FORTRAN) $(LDFLAGS) -o SCFALLTEST.exe carma_scfalltest.o carma_testutils.o atmosphere_mod.o $(CARMA_OBJ)
 SULFATETEST.exe : $(CARMA_OBJ) carma_sulfatetest.o carma_testutils.o atmosphere_mod.o
 	$(FORTRAN) $(LDFLAGS) -o SULFATETEST.exe carma_sulfatetest.o carma_testutils.o atmosphere_mod.o $(CARMA_OBJ)
-parma_box : $(CARMA_OBJ) carma_box.o atmosphere_mod.o
-	f2py -c --fcompiler=gfortran --f90flags=-ffree-line-length-none -lgomp -I. atmosphere_mod.o $(CARMA_OBJ) -m carma_box --f2cmap .f2py_f2cmap ../../interfaces/carma_box.F90
-	cp ../../interfaces/python/parma_box.py .
-	cp ../../interfaces/python/parma_box.ipynb .
+parma_box_sulfate : $(CARMA_OBJ) atmosphere_mod.o
+	f2py -c --fcompiler=gfortran --f90flags=-ffree-line-length-none -lgomp -I. atmosphere_mod.o $(CARMA_OBJ) -m carma_box_sulfate --f2cmap .f2py_f2cmap ../../interfaces/carma_box_sulfate.F90
+	cp ../../interfaces/python/parma_box_sulfate.py .
 	cp ../../interfaces/python/utils/*.py .
 	cp -r ../../carma_tools .
-parma_column : $(CARMA_OBJ) atmosphere_mod.o
-	f2py -c --fcompiler=gfortran --f90flags=-ffree-line-length-none -lgomp -I. atmosphere_mod.o $(CARMA_OBJ) -m carma_column --f2cmap .f2py_f2cmap ../../interfaces/carma_column.F90
+parma_column_sulfate : $(CARMA_OBJ) atmosphere_mod.o
+	f2py -c --fcompiler=gfortran --f90flags=-ffree-line-length-none -lgomp -I. atmosphere_mod.o $(CARMA_OBJ) -m carma_column_sulfate --f2cmap .f2py_f2cmap ../../interfaces/carma_column_sulfate.F90
 	#python3 -m numpy.f2py -c --f90flags=-ffree-line-length-none ../../interfaces/carma_column.F90 atmosphere_mod.o $(CARMA_OBJ) -m carma_column --f2cmap .f2py_f2cmap
-	cp ../../interfaces/python/parma_column.py .
+	cp ../../interfaces/python/parma_column_sulfate.py .
 	cp ../../interfaces/python/utils/*.py .
 	cp -r ../../carma_tools .
 parma_column_dust : $(CARMA_OBJ) atmosphere_mod.o

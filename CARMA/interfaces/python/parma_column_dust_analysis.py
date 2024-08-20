@@ -33,17 +33,19 @@ sa_mxdu = data.variables['SA_mxdu'][:]
 sa_mxsu = data.variables['SA_mxsu'][:]
 sa_su   = data.variables['SA_su'][:]
 
-dndlogr_mxdu = data.variables['dNdlogr_mxdu']
-dndlogr_mxsu = data.variables['dNdlogr_mxsu']
-dndlogr_su   = data.variables['dNdlogr_su']
-dadlogr_mxdu = data.variables['dAdlogr_mxdu']
-dadlogr_mxsu = data.variables['dAdlogr_mxsu']
-dadlogr_su   = data.variables['dAdlogr_su']
-dmdlogr_mxdu = data.variables['dMdlogr_mxdu']
-dmdlogr_mxsu = data.variables['dMdlogr_mxsu']
-dmdlogr_su   = data.variables['dMdlogr_su']
-r_mx = data.variables['r_mx']
-r_su = data.variables['r_su']
+dndlogr_mxdu = data.variables['dNdlogr_mxdu'][:]
+dndlogr_mxsu = data.variables['dNdlogr_mxsu'][:]
+dndlogr_su   = data.variables['dNdlogr_su'][:]
+dadlogr_mxdu = data.variables['dAdlogr_mxdu'][:]
+dadlogr_mxsu = data.variables['dAdlogr_mxsu'][:]
+dadlogr_su   = data.variables['dAdlogr_su'][:]
+dmdlogr_mxdu = data.variables['dMdlogr_mxdu'][:]
+dmdlogr_mxsu = data.variables['dMdlogr_mxsu'][:]
+dmdlogr_su   = data.variables['dMdlogr_su'][:]
+r_mx = data.variables['r_mx'][:]
+r_su = data.variables['r_su'][:]
+r_mx *= 1e6
+r_su *= 1e6
 
 
 ################################################################################
@@ -95,47 +97,62 @@ plt.colorbar(cf, ax=axs[2,2], label='$kg\ m^{-3}$')
 
 # Time dependent number distribution
 axs[3,0].loglog(r_su, dndlogr_su[0,alt_idx,:], color='blue', label='SU Initial')
-axs[3,0].loglog(r_su, dndlogr_su[-1,alt_idx,:], '--', color='blue', label='SU t = ' + str(time[-1]))
-axs[3,0].loglog(r_mx[0,alt_idx,:], dndlogr_mxdu[0,alt_idx,:], color='black', label='MXDU Initial')
-axs[3,0].loglog(r_mx[-1,alt_idx,:], dndlogr_mxdu[-1,alt_idx,:], '--', color='black', label='MXDU t = ' + str(time[-1]))
-axs[3,0].loglog(r_mx[0,alt_idx,:], dndlogr_mxsu[0,alt_idx,:], color='green', label='MXSU Initial')
-axs[3,0].loglog(r_mx[-1,alt_idx,:], dndlogr_mxsu[-1,alt_idx,:], '--', color='green', label='MXSU t = ' + str(time[-1]))
+axs[3,0].loglog(r_su, dndlogr_su[-1,alt_idx,:], '--', color='blue', \
+        label='SU t = ' + str(time[-1]))
+axs[3,0].loglog(r_mx[0,alt_idx,:], dndlogr_mxdu[0,alt_idx,:], color='black', \
+        label='MXDU Initial')
+axs[3,0].loglog(r_mx[-1,alt_idx,:], dndlogr_mxdu[-1,alt_idx,:], '--', \
+        color='black', label='MXDU t = ' + str(time[-1]))
+axs[3,0].loglog(r_mx[0,alt_idx,:], dndlogr_mxsu[0,alt_idx,:], color='green', \
+        label='MXSU Initial')
+axs[3,0].loglog(r_mx[-1,alt_idx,:], dndlogr_mxsu[-1,alt_idx,:], '--', \
+        color='green', label='MXSU t = ' + str(time[-1]))
 
 upper_lim = np.max((dndlogr_su, dndlogr_mxsu, dndlogr_mxdu))
-axs[3,0].set_ylim((1e0,upper_lim))
+axs[3,0].set_ylim((1e-3,upper_lim))
 axs[3,0].set_title('Number distribution')
 axs[3,0].set_ylabel('dN/dlog(r)')
-axs[3,0].set_xlabel('r ($m$)')
+axs[3,0].set_xlabel('r ($\mu m$)')
 axs[3,0].grid()
 
 # Time dependent surface area distribution
 axs[3,1].loglog(r_su, dadlogr_su[0,alt_idx,:], color='blue', label='SU Initial')
-axs[3,1].loglog(r_su, dadlogr_su[-1,alt_idx,:], '--', color='blue', label='SU t = ' + str(time[-1]))
-axs[3,1].loglog(r_mx[0,alt_idx,:], dadlogr_mxdu[0,alt_idx,:], color='black', label='MXDU Initial')
-axs[3,1].loglog(r_mx[-1,alt_idx,:], dadlogr_mxdu[-1,alt_idx,:], '--', color='black', label='MXDU t = ' + str(time[-1]))
-axs[3,1].loglog(r_mx[0,alt_idx,:], dadlogr_mxsu[0,alt_idx,:], color='green', label='MXSU Initial')
-axs[3,1].loglog(r_mx[-1,alt_idx,:], dadlogr_mxsu[-1,alt_idx,:], '--', color='green', label='MXSU t = ' + str(time[-1]))
+axs[3,1].loglog(r_su, dadlogr_su[-1,alt_idx,:], '--', color='blue', \
+        label='SU t = ' + str(time[-1]))
+axs[3,1].loglog(r_mx[0,alt_idx,:], dadlogr_mxdu[0,alt_idx,:], color='black', \
+        label='MXDU Initial')
+axs[3,1].loglog(r_mx[-1,alt_idx,:], dadlogr_mxdu[-1,alt_idx,:], '--', \
+        color='black', label='MXDU t = ' + str(time[-1]))
+axs[3,1].loglog(r_mx[0,alt_idx,:], dadlogr_mxsu[0,alt_idx,:], color='green', \
+        label='MXSU Initial')
+axs[3,1].loglog(r_mx[-1,alt_idx,:], dadlogr_mxsu[-1,alt_idx,:], '--', \
+        color='green', label='MXSU t = ' + str(time[-1]))
 
 upper_lim = np.max((dadlogr_su, dadlogr_mxsu, dadlogr_mxdu))
 axs[3,1].set_ylim((1e-10,upper_lim))
 axs[3,1].set_title('Surface area distribution')
 axs[3,1].set_ylabel('dA/dlog(r)')
-axs[3,1].set_xlabel('r ($m$)')
+axs[3,1].set_xlabel('r ($\mu m$)')
 axs[3,1].grid()
 
 # Time dependent mass distribution
 axs[3,2].loglog(r_su, dmdlogr_su[0,alt_idx,:], color='blue', label='SU Initial')
-axs[3,2].loglog(r_su, dmdlogr_su[-1,alt_idx,:], '--', color='blue', label='SU t = ' + str(time[-1]))
-axs[3,2].loglog(r_mx[0,alt_idx,:], dmdlogr_mxdu[0,alt_idx,:], color='black', label='MXDU Initial')
-axs[3,2].loglog(r_mx[-1,alt_idx,:], dmdlogr_mxdu[-1,alt_idx,:], '--', color='black', label='MXDU t = ' + str(time[-1]))
-axs[3,2].loglog(r_mx[0,alt_idx,:], dmdlogr_mxsu[0,alt_idx,:], color='green', label='MXSU Initial')
-axs[3,2].loglog(r_mx[-1,alt_idx,:], dmdlogr_mxsu[-1,alt_idx,:], '--', color='green', label='MXSU t = ' + str(time[-1]))
+axs[3,2].loglog(r_su, dmdlogr_su[-1,alt_idx,:], '--', color='blue', \
+        label='SU t = ' + str(time[-1]))
+axs[3,2].loglog(r_mx[0,alt_idx,:], dmdlogr_mxdu[0,alt_idx,:], color='black', \
+        label='MXDU Initial')
+axs[3,2].loglog(r_mx[-1,alt_idx,:], dmdlogr_mxdu[-1,alt_idx,:], '--', \
+        color='black', label='MXDU t = ' + str(time[-1]))
+axs[3,2].loglog(r_mx[0,alt_idx,:], dmdlogr_mxsu[0,alt_idx,:], color='green', \
+        label='MXSU Initial')
+axs[3,2].loglog(r_mx[-1,alt_idx,:], dmdlogr_mxsu[-1,alt_idx,:], '--', \
+        color='green', label='MXSU t = ' + str(time[-1]))
 
 upper_lim = np.max((dmdlogr_su, dmdlogr_mxsu, dmdlogr_mxdu))
 axs[3,2].set_ylim((1e-15,upper_lim))
 axs[3,2].set_title('Mass distribution')
 axs[3,2].set_ylabel('dM/dlog(r)')
-axs[3,2].set_xlabel('r ($m$)')
+axs[3,2].set_xlabel('r ($\mu m$)')
 axs[3,2].grid()
 
 axs[3,2].legend(bbox_to_anchor=(1.05,1), loc='upper left', borderaxespad=0.)

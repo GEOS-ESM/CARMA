@@ -1,5 +1,6 @@
-# Interfaces for running CARMA without a broader model
+# PARMA: Interfaces for running CARMA without a broader model
 Developed by Parker Case (parker.a.case@nasa.gov)
+Current version: v1.0 (2024/08/20)
 ## Introduction
 While the testing suite in CARMA is useful for making sure code changes haven't
 altered the basic processes, it is cumbersome to change the experiments and
@@ -11,6 +12,19 @@ called by Python as functions.
 
 ## List of interfaces and related python drivers
 Below is a list of Fotran interfaces and their related python drivers:
+- carma_column_sulfate.F90: the simplest column model with only pure sulfate
+    - parma_column_sulfate.py: the python interface for running the sulfate
+        column model. The main method of this file allows you to run this
+        model with `python parma_column_sulfate.py`.
+    - parma_column_sulfate_analysis.py: an example for reading the output of
+        this model.
+- carma_column_dust.F90: a column with a pure sulfate group and a mixed group
+    with a dust element and a sulfate element.
+    - parma_column_dust.py: the python interface for running the dust
+        column model. The main method of this file allows you to run this
+        model with `python parma_column_dust.py`.
+    - parma_column_dust_analysis.py: an example for reading the output of
+        this model.
 - carma_box.F90: A box model interface for a single group, single element.
     - parma_box.py: Simple python script to drive carma_box.F90 based on
                      stratospheric aerosol.
