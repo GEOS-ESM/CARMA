@@ -136,3 +136,15 @@ def cdf(dndr, rwet, dr, bin_mins):
             cdf[i] = np.nansum(dn[i:])
     return np.asarray(cdf)
 
+def lognormal(r, N, mu, sigma):
+    """Create a lognormal distribution, sampled at CARMA bins. Useful for
+    initializing CARMA or comparing to data.
+
+    Arguments:
+    r -- center radius bins, like those from carmabins()
+    N -- scaling variable, total number concentration
+    mu -- median radius, same units as r
+    sigma -- distribution width parameter
+    """
+    return N/(np.sqrt(2*np.pi)*sigma*r)*np.exp(-((np.log(r)-np.log(mu))**2)/(2*sigma**2))
+

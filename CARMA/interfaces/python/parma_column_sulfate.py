@@ -24,7 +24,7 @@ import carma_tools.carmabins as carmabins
 from carma_tools.wetr import grow_v75
 
 def run_column(nz, dt, nt, nt_carma, nbins, rmrat, rmin, rhop, h2o, h2so4, \
-                su, constant_h2so4 = False):
+                su, constant_h2so4 = False, exp_name = '0'):
     """Runs a CARMA column with the specified parameters
 
     Arguments:
@@ -98,7 +98,7 @@ def run_column(nz, dt, nt, nt_carma, nbins, rmrat, rmin, rhop, h2o, h2so4, \
     ###########################################################################
     # Create .nc4 file
     ###########################################################################
-    ncfile = netCDF4.Dataset('parma_column_sulfate.nc4',mode='w')
+    ncfile = netCDF4.Dataset('parma_column_sulfate_' + exp_name + '.nc4', mode='w')
     ncfile.createDimension('layer', nz)
     ncfile.createDimension('bin', nbins)
     ncfile.createDimension('time', nt+1)

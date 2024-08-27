@@ -29,7 +29,7 @@ from carma_tools.dust_tools import kok_size_distribution
 
 def run_column(nz, dt, nt, nt_carma, nbins, rmrat_su, rmin_su, rmrat_mx, \
                 rmin_mx, rhop_su, rhop_du, h2o, h2so4, su, mxsu, mxdu, \
-                constant_h2so4 = False):
+                constant_h2so4 = False, exp_name = '0'):
     """Runs a CARMA column with the specified parameters
 
     Arguments:
@@ -77,7 +77,7 @@ def run_column(nz, dt, nt, nt_carma, nbins, rmrat_su, rmin_su, rmrat_mx, \
         su_out, mxsu_out, mxdu_out, t_out, p_out, h2so4_out, h2o_out, \
                 rhoa_out, rh_out = carma_column_dust(rmrat_su, rmrat_mx, \
                 rmin_su, rmin_mx, rhop_su, rhop_du, t, p, h2so4, h2o, su, \
-                mxsu, mxdu, dt, 1, constant_h2so4, nbins, nz)
+                mxsu, mxdu, dt, nt_carma, constant_h2so4, nbins, nz)
         su_lib[i,:,:] = su_out
         mxsu_lib[i,:,:] = mxsu_out - mxdu_out
         mxdu_lib[i,:,:] = mxdu_out
@@ -166,7 +166,7 @@ def run_column(nz, dt, nt, nt_carma, nbins, rmrat_su, rmin_su, rmrat_mx, \
     ############################################################################
     # Create .nc4 file
     ############################################################################
-    ncfile = netCDF4.Dataset('parma_column_dust.nc4',mode='w')
+    ncfile = netCDF4.Dataset('parma_column_dust_' + exp_name + '.nc4',mode='w')
     ncfile.createDimension('layer', nz)
     ncfile.createDimension('bin', nbins)
     ncfile.createDimension('time', nt+1)
