@@ -31,9 +31,9 @@ def kok_size_distribution(nbin, r, rlow, rup, rhod, rhog):
     nbin_ = 1000
     rho_dust = rhod*1000
     rho_grp  = rhog*1000
-    r    = r * 2e-2
-    rlow = rlow * 2e-2
-    rup  = rup * 2e-2
+    r    = r * 1e-2
+    rlow = rlow * 1e-2
+    rup  = rup * 1e-2
 
     dm = np.zeros((nbin,))
     for ibin in range(nbin):
