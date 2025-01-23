@@ -17,3 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Deprecated
 
+## [1.0.0] - 2025-01-23
+
+### Added
+
+- Initial release of CARMA based on CARMAchem_GridComp code from GEOSchem_GridComp v1.15.0
