@@ -1,0 +1,374 @@
+!! CARMA sulfate module, as in GEOS, but in a box model. To be used for 
+!!  running a CARMA box model from a wrapper. Runs one timestep. Should
+!!  have the following inputs:
+!!
+!!   Temperature T
+!!   Pressure    P
+!!   H2SO4 MMR   H2SO4
+!!   H2O MMR     H2O
+!!   SU MMR Bins SU001...SU024
+!!   28 input variables
+!!
+!!   TODO: Reconcile standard atmospehere
+!!
+!! @author Parker Case
+!! @version 2023/10/10: Updated for f2py setup
+!!          2023/04/02: First crack, using files for passing parameters
+!!
+!! Just have one grid box. Allow for all sulfate processes:
+!!   nucleation, condenstation, coagulation, settling.
+subroutine carma_column_dust(rmrat_su, rmrat_mx, rmin_su, rmin_mx, rhop_su, rhop_du, t_0, p_0, h2so4_0, h2o_0, mmr_su_0, mmr_mxsu_0, mmr_mxdu_0, dt, nt, constant_h2so4, nbin, nlayer, mmr_su_out, mmr_mxsu_out, mmr_mxdu_out, t_out, p_out, h2so4_out, h2o_out, rhoa_out, rh_out)
+  use carma_precision_mod 
+  use carma_constants_mod 
+  use carma_enums_mod 
+  use carma_types_mod 
+  use carmaelement_mod
+  use carmagroup_mod
+  use carmagas_mod
+  use carmastate_mod
+  use carma_mod
+  use atmosphere_mod
+
+  implicit none
+
+  integer, parameter        :: NX           = 1
+  integer, parameter        :: NY           = 1
+  integer, parameter        :: NELEM        = 3
+  integer, parameter        :: NGROUP       = 2
+  integer, parameter        :: NSOLUTE      = 0
+  integer, parameter        :: NGAS         = 2
+  integer, parameter        :: NWAVE        = 0
+  integer, parameter        :: LUNOPRT      = 6
+  
+  ! Different sizes for time steps provide different results
+  ! because of the satbility issues.
+  real(kind=f), parameter   :: deltax = 100._f
+  real(kind=f), parameter   :: deltay = 100._f
+  real(kind=f), parameter   :: deltaz = 1000._f
+  real(kind=f), parameter   :: zmin   = 0._f
+
+  integer, parameter        :: I_H2SO4  = 1
+  integer, parameter        :: I_DUST  = 2
+
+  type(carma_type), target            :: carma
+  type(carma_type), pointer           :: carma_ptr
+  type(carmastate_type)               :: cstate
+  integer                             :: rc = 0
+  
+  real(kind=f), allocatable   :: xc(:,:,:)
+  real(kind=f), allocatable   :: dx(:,:,:)
+  real(kind=f), allocatable   :: yc(:,:,:)
+  real(kind=f), allocatable   :: dy(:,:,:)
+  real(kind=f), allocatable   :: zc(:,:,:)
+  real(kind=f), allocatable   :: zl(:,:,:)
+  real(kind=f), allocatable   :: p(:,:,:)
+  real(kind=f), allocatable   :: pl(:,:,:)
+  real(kind=f), allocatable   :: t(:,:,:),t_orig(:,:,:)
+  real(kind=f), allocatable   :: relhum(:,:,:)
+  real(kind=f), allocatable   :: rho(:,:,:)
+  
+  real(kind=f), allocatable   :: mmr(:,:,:,:,:)
+  real(kind=f), allocatable   :: mmr_gas(:,:,:,:)
+  real(kind=f), allocatable   :: new_gas(:,:,:,:)
+  real(kind=f), allocatable   :: satliq(:,:,:,:)
+  real(kind=f), allocatable   :: satice(:,:,:,:)
+  
+  real(kind=f), allocatable   :: r(:)
+  real(kind=f), allocatable   :: rmass(:)
+  real(kind=f), allocatable   :: numberDensity(:,:,:)
+  real(kind=f), allocatable   :: r_wet(:,:,:)
+  real(kind=f), allocatable   :: rhop_wet(:,:,:)
+
+  real(kind=f), allocatable   :: lat(:,:)
+  real(kind=f), allocatable   :: lon(:,:)
+
+  integer      :: nbin, nt, nlayer
+  logical      :: constant_h2so4
+  real(kind=f) :: rmrat_su, rmrat_mx, rmin_su, rmin_mx, rhop_su, rhop_du, dt
+  real(kind=f) :: p_0(nlayer)
+  real(kind=f) :: zc_0(nlayer)
+  real(kind=f) :: t_0(nlayer)
+  real(kind=f) :: zl_0(nlayer)
+  real(kind=f) :: h2o_0(nlayer)
+  real(kind=f) :: h2so4_0(nlayer)
+  real(kind=f) :: mmr_su_0(nlayer,nbin)
+  real(kind=f) :: mmr_mxsu_0(nlayer,nbin)
+  real(kind=f) :: mmr_mxdu_0(nlayer,nbin)
+  real(kind=f), intent(out) :: mmr_su_out(nlayer,nbin)
+  real(kind=f), intent(out) :: mmr_mxsu_out(nlayer,nbin)
+  real(kind=f), intent(out) :: mmr_mxdu_out(nlayer,nbin)
+  real(kind=f), intent(out) :: p_out(nlayer)
+  real(kind=f), intent(out) :: t_out(nlayer)
+  real(kind=f), intent(out) :: rhoa_out(nlayer)
+  real(kind=f), intent(out) :: rh_out(nlayer)
+  real(kind=f), intent(out) :: h2o_out(nlayer)
+  real(kind=f), intent(out) :: h2so4_out(nlayer)
+
+  integer               :: outid
+  character(len=80)     :: binName(NELEM, nbin)
+  character(len=80)     :: gasName(NGAS)
+  character(len=80)     :: sname
+  character(len=80)     :: groupmassname,grouprname,binndname,binwetrhopname,binwetrname
+  character(len=80)     :: satliqName,saticeName,mrname,gname
+  character(len=10)      :: pid
+  character(len=10)      :: pid_input
+
+  integer               :: i
+  integer               :: ix
+  integer               :: iy
+  integer               :: ixy
+  integer               :: istep
+  integer               :: igas
+  integer               :: igroup
+  integer               :: ielem
+  integer               :: ibin
+  integer               :: nsubsteps
+  integer               :: lastsub = 0
+  integer               :: date
+  integer               :: bins(nbin)
+
+  real(kind=f)          :: nretries
+  real(kind=f)          :: ireal
+  real(kind=f)          :: lastret = 0._f
+
+  real(kind=f)          :: time
+  real(kind=f)          :: rrat(nbin)
+  real(kind=f)          :: drh
+
+  ! Allocate the arrays that we need for the model
+  allocate(xc(nlayer,NY,NX), dx(nlayer,NY,NX), yc(nlayer,NY,NX), dy(nlayer,NY,NX), &
+           zc(nlayer,NY,NX), zl(nlayer+1,NY,NX), p(nlayer,NY,NX), pl(nlayer+1,NY,NX), &
+           t(nlayer,NY,NX),rho(nlayer,NY,NX))
+  allocate(mmr(nlayer,NY,NX,NELEM,nbin))
+  allocate(mmr_gas(nlayer,NY,NX,NGAS))
+  allocate(new_gas(nlayer,NY,NX,NGAS))
+  allocate(satliq(nlayer,NY,NX,NGAS))
+  allocate(satice(nlayer,NY,NX,NGAS))
+  allocate(r(nbin))
+  allocate(rmass(nbin))
+  allocate(lat(NY,NX), lon(NY,NX))
+  allocate(numberDensity(nlayer,NY,NX))
+  allocate(r_wet(nlayer,NY,NX))
+  allocate(rhop_wet(nlayer,NY,NX))
+  allocate(t_orig(nlayer,NY,NX),)
+
+  ! Define the particle-grid extent of the CARMA test
+  call CARMA_Create(carma, nbin, NELEM, NGROUP, NSOLUTE, NGAS, NWAVE, rc, &
+      LUNOPRT=6)
+  if (rc /=0) stop "    *** CARMA_Create FAILED ***"
+  
+  carma_ptr => carma
+
+  call CARMAGROUP_Create(carma, 1, "sulfate", rmin_su, rmrat_su, I_SPHERE, 1._f, .false., &
+                        rc, irhswell=I_WTPCT_H2SO4, do_drydep=.false., &
+                        shortname="SULFATE", do_vtran=.true., is_sulfate=.true.)
+  if (rc /=0) stop "    *** CARMAGROUP_Create FAILED ***"
+
+  call CARMAGROUP_Create(carma, 2, "mixedp", rmin_mx, rmrat_mx, I_SPHERE, 1._f, .false., &
+                        rc, irhswell=I_NO_SWELLING, do_drydep=.false., &
+                        shortname="MIXEDP", do_vtran=.true., is_sulfate=.true.)
+  if (rc /=0) stop "    *** CARMAGROUP_Create FAILED ***"
+  
+  ! Define the elements
+  call CARMAELEMENT_Create(carma, 1, 1, "sulfate", rhop_su, I_VOLATILE, I_H2SO4, rc, shortname="SU")    
+  if (rc /=0) stop "    *** CARMAELEMENT_Create FAILED ***"
+
+  call CARMAELEMENT_Create(carma, 2, 2, "mx_sulfate", rhop_su, I_VOLATILE, I_H2SO4, rc, shortname="MXSU")    
+  if (rc /=0) stop "    *** CARMAELEMENT_Create FAILED ***"
+
+  call CARMAELEMENT_Create(carma, 3, 2, "mx_dust", rhop_du, I_COREMASS, I_DUST, rc, shortname="MXDU")
+  if (rc /=0) stop "    *** CARMAELEMENT_Create FAILED ***"
+  
+  ! Define the gases
+  call CARMAGAS_Create(carma, 1, "Water Vapor", WTMOL_H2O, I_VAPRTN_H2O_MURPHY2005, &
+    I_GCOMP_H2O, rc, shortname = "H2O", dgc_threshold=0.1_f, ds_threshold=0.1_f)
+  if (rc /=0) stop "    *** CARMAGAS_Create FAILED ***"
+
+  call CARMAGAS_Create(carma, 2, "Sulpheric Acid", 98.078479_f, I_VAPRTN_H2SO4_AYERS1980, &
+    I_GCOMP_H2SO4, rc, shortname = "H2SO4", dgc_threshold=0.1_f, ds_threshold=0.1_f)
+  if (rc /=0) stop "    *** CARMAGAS_Create FAILED ***"
+
+  ! Setup the CARMA processes to exercise
+  call CARMA_AddGrowth(carma, 1, 2, rc)   ! set H2SO4 to be the condensing gas to sulfate group
+  if (rc /=0) stop "    *** CARMA_AddGrowth FAILED ***"
+
+  call CARMA_AddGrowth(carma, 2, 2, rc)   ! set H2SO4 to be the condensing gas to mixed group
+  if (rc /=0) stop "    *** CARMA_AddGrowth FAILED ***"
+
+  call CARMA_AddNucleation(carma, 1, 1, I_HOMNUC, 0._f, rc, igas=2)
+  if (rc /=0) stop "    *** CARMA_AddNucleation FAILED ***"
+
+  call CARMA_AddCoagulation(carma, 1, 1, 1, I_COLLEC_FUCHS, rc)
+  if (rc /=0) stop "    *** CARMA_AddCoagulation FAILED ***"
+
+  call CARMA_AddCoagulation(carma, 1, 2, 2, I_COLLEC_FUCHS, rc)
+  if (rc /=0) stop "    *** CARMA_AddCoagulation FAILED ***"
+
+  call CARMA_AddCoagulation(carma, 2, 2, 2, I_COLLEC_FUCHS, rc)
+  if (rc /=0) stop "    *** CARMA_AddCoagulation FAILED ***"
+
+  call CARMA_Initialize(carma, rc, do_vtran=.true., do_grow=.true., do_coag=.true., &
+          do_substep=.true., do_thermo=.true., maxretries=16, maxsubsteps=32, dt_threshold=1._f)
+  if (rc /=0) stop "    *** CARMA_Initialize FAILED ***"
+
+  
+  ! For simplicity of setup, do a case with Cartesian coordinates,
+  ! which are specified in this interface in meters.
+  !
+  ! NOTE: For Cartesian coordinates, the first level is the bottom 
+  ! of the model (e.g. z = 0), while for sigma and hybrid coordinates
+  ! the first level is the top of the model.
+  lat = 10.0_f
+  lon = 10.0_f
+
+  ! Horizonal centers
+  do ix = 1, NX
+    do iy = 1, NY
+      dx(:,iy,ix) = deltax
+      xc(:,iy,ix) = ix*dx(:,iy,ix) / 2._f
+      dy(:,iy,ix) = deltay
+      yc(:,iy,ix) = iy*dy(:,iy,ix) / 2._f
+    end do
+  end do
+
+  ! Vertical center
+  do i = 1, nlayer
+    ireal = real(i)
+    zc(i,1,1) = zmin + (deltaz * (ireal - 0.5_f))
+  end do
+  
+  call GetStandardAtmosphere(zc, p=p, t=t)
+
+  ! Vertical edge
+  do i = 1, nlayer+1
+    ireal = real(i)
+    zl(i,1,1) = zmin + ((ireal - 1) * deltaz)
+  end do
+  call GetStandardAtmosphere(zl, p=pl)
+
+  do ibin = 1,nbin
+    bins(ibin) = ibin
+  end do
+
+  ! Initial Conditions:
+  !p(:,1,1)         = p_0
+  !t(:,1,1)         = t_0
+  rho(:,1,1)       = (p_0 * 10._f) / (R_AIR * t_0) * (1e-3_f * 1e6_f)
+  !pl(1,1,1)        = p_0(1) - (zl(1,1,1) - zc(1,1,1)) * rho(1,1,1) * (GRAV / 100._f)
+  !pl(2:,1,1)        = p_0 - (zl(2:,1,1) - zc(1:,1,1)) * rho(1,1,1) * (GRAV / 100._f)
+
+  ! Initial H2O and H2SO4 concentrations
+  mmr_gas(:,1,1,1)  = h2o_0     ! H2O
+  mmr_gas(:,1,1,2)  = h2so4_0     ! H2SO4
+
+  satliq(:,:,:,:)   = -1._f
+  satice(:,:,:,:)   = -1._f
+  
+  ! Initial sulfate concentration
+  do ibin = 1,nbin
+    mmr(:,1,1,1,ibin) = mmr_su_0(:,ibin)
+    mmr(:,1,1,2,ibin) = mmr_mxsu_0(:,ibin)
+    mmr(:,1,1,3,ibin) = mmr_mxdu_0(:,ibin)
+  end do
+  
+  t_orig(1,:,:) = t(1,:,:)
+  
+  ! Iterate the model over a few time steps.
+  do istep = 1, nt
+    ! Create a CARMASTATE for this column.
+    do ixy = 1, NX*NY
+      ix = ((ixy-1) / NY) + 1
+      iy = ixy - (ix-1)*NY
+      call CARMASTATE_Create(cstate, carma_ptr, time, dt, nlayer, &
+                          I_CART, I_CART, lat(iy,ix), lon(iy,ix), &
+                          xc(:,iy,ix), dx(:,iy,ix), &
+                          yc(:,iy,ix), dy(:,iy,ix), &
+                          zc(:,iy,ix), zl(:,iy,ix), &
+                          p(:,iy,ix),  pl(:,iy,ix), &
+                          t(:,iy,ix), rc, &
+                          told=t(:,iy,ix), &
+                          qh2o=mmr_gas(:,iy,ix,1))
+      if (rc /=0) stop "    *** CARMASTATE_Create FAILED ***"
+      ! Send the bin mmrs to CARMA
+      do ielem = 1, NELEM
+        do ibin = 1, nbin
+          call CARMASTATE_SetBin(cstate, ielem, ibin, mmr(:,iy,ix,ielem,ibin), rc)
+          if (rc /=0) stop "    *** CARMASTATE_SetBin FAILED ***"
+        end do
+      end do
+
+      ! Send the gas mmrs to CARMA
+      !
+      ! For substepping to do anything, during a step, the old an current
+      ! gas mmrs or temperatures need to be different.
+      new_gas(:,iy,ix,:) = mmr_gas(:,iy,ix,:)
+
+      do igas = 1, NGAS
+        call CARMASTATE_SetGas(cstate, igas, new_gas(:,iy,ix,igas), rc, &
+                mmr_old=mmr_gas(:,iy,ix,igas),&
+                satice_old=satice(:,iy,ix,igas), &
+                satliq_old=satliq(:,iy,ix,igas))
+        if (rc /=0) stop "    *** CARMASTATE_SetGas FAILED ***"
+      end do
+
+      ! Execute the step
+      call CARMASTATE_Step(cstate, rc)
+      if (rc /=0) stop "    *** CARMASTATE_Step FAILED ***"
+       
+      ! Get the retry stats and the updated temperature.
+      call CARMASTATE_Get(cstate, rc, nsubstep=nsubsteps, nretry=nretries)
+      if (rc /=0) stop "    *** CARMASTATE_Get FAILED ***"
+
+      call CARMASTATE_GetState(cstate, rc, rhoa_wet=rhoa_out(:), t=t(:,iy,ix))
+      if (rc /=0) stop "    *** CARMASTATE_GetState FAILED ***"
+
+      ! Get the updated bin mmr.
+      do ielem = 1, NELEM
+        call CARMAELEMENT_Get(carma, ielem, rc, shortname=sname)
+
+        do ibin = 1, nbin
+          call CARMASTATE_GetBin(cstate, ielem, ibin, mmr(:,iy,ix,ielem,ibin), rc, numberDensity=numberDensity(:,iy,ix), r_wet=r_wet(:,iy,ix), rhop_wet=rhop_wet(:,iy,ix))
+          if (rc /=0) stop "    *** CARMASTATE_GetBin FAILED ***"
+
+        end do
+      end do
+
+
+      ! Get the updated gas mmr.
+      do igas = 1, NGAS
+        call CARMASTATE_GetGas(cstate, igas, &
+        mmr_gas(:,iy,ix,igas), rc, &
+        satliq=satliq(:,iy,ix,igas), &
+        satice=satice(:,iy,ix,igas))
+        if (rc /=0) stop "    *** CARMASTATE_GetGas FAILED ***"
+      end do
+
+      ! Replace H2SO4 if constant_h2so4
+      if (constant_h2so4) then
+          mmr_gas(:,1,1,2)  = h2so4_0     ! H2SO4
+      end if
+
+      lastsub = nsubsteps
+      lastret = nretries
+
+    end do   ! space loop
+  end do ! time loop
+
+  h2o_out = mmr_gas(:,1,1,1)
+  h2so4_out = mmr_gas(:,1,1,2)
+  rh_out = satliq(:,1,1,1) * 100
+  t_out = t(:,1,1)
+  p_out = p(:,1,1)
+  do ibin = 1,nbin
+    mmr_su_out(:,ibin) = mmr(:,1,1,1,ibin)
+    mmr_mxsu_out(:,ibin) = mmr(:,1,1,2,ibin)
+    mmr_mxdu_out(:,ibin) = mmr(:,1,1,3,ibin)
+  end do
+
+  ! Cleanup the carma state objects
+  call CARMASTATE_Destroy(cstate, rc)
+  if (rc /=0) stop "    *** CARMASTATE_Destroy FAILED ***"
+
+  call CARMA_Destroy(carma, rc)
+  if (rc /=0) stop "    *** CARMA_Destroy FAILED ***"
+end subroutine

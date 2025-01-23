@@ -333,7 +333,7 @@ contains
   !!  @version Feb-2009 
   !!  @author  Chuck Bardeen 
   subroutine CARMA_Initialize(carma, rc, do_cnst_rlh, do_coag, do_detrain, do_fixedinit, &
-      do_grow, do_incloud, do_explised, do_print_init, do_substep, do_thermo, do_vdiff, &
+          do_grow, do_incloud, do_explised, do_print_init, do_substep, do_pfast, do_thermo, do_vdiff, &
       do_vtran, do_drydep, vf_const, minsubsteps, maxsubsteps, maxretries, conmax, &
       do_pheat, do_pheatatm, dt_threshold, cstick, gsticki, gstickl, tstick, do_clearsky, &
       do_partialinit)

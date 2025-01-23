@@ -76,8 +76,6 @@ subroutine freezaerl_koop2000(carma, cstate, iz, rc)
   real(kind=f)                         :: fkelvi
 
 
-  rc = RC_OK
-  
   !  Aerosol freezing limited to T < 240K
   if (t(iz) <= 240._f) then
 

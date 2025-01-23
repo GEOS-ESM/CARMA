@@ -59,9 +59,6 @@ subroutine freezglaerl_murray2010(carma, cstate, iz, rc)
   real(kind=f)                         :: dfice   ! difference in fraction of aerosol nucleated
   real(kind=f)                         :: ssi, ssiold
   
-  ! Assume success.
-  rc = RC_OK
-
   ! Loop over particle groups.
   do igroup = 1,NGROUP
 

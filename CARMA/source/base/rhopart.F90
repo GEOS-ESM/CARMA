@@ -187,17 +187,17 @@ subroutine rhopart(carma, cstate, rc)
         else
           ! rlow
           call getwetr(carma, igroup, relhum(iz), rlow(ibin,igroup), rlow_wet(iz,ibin,igroup), &
-            rhop(iz,ibin,igroup), rhop_wet(iz,ibin,igroup), rc)
+            rhop(iz,ibin,igroup), rhop_wet(iz,ibin,igroup), rc, temp=t(iz))
           if (rc < 0) return
 
           ! rup
           call getwetr(carma, igroup, relhum(iz), rup(ibin,igroup), rup_wet(iz,ibin,igroup), &
-            rhop(iz,ibin,igroup), rhop_wet(iz,ibin,igroup), rc)
+            rhop(iz,ibin,igroup), rhop_wet(iz,ibin,igroup), rc, temp=t(iz))
           if (rc < 0) return
 
           ! r
           call getwetr(carma, igroup, relhum(iz), r(ibin,igroup), r_wet(iz,ibin,igroup), &
-            rhop(iz,ibin,igroup), rhop_wet(iz,ibin,igroup), rc)
+            rhop(iz,ibin,igroup), rhop_wet(iz,ibin,igroup), rc, temp=t(iz))
           if (rc < 0) return
         end if
       end do
