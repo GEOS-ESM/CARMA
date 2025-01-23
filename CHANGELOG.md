@@ -9,7 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added 'microfast parameterization'
+- Added a routine to normalize dmdt (prevent gas overshoot)
+- Added a NULL option for vapor pressure equation
+
 ### Changed
+
+- In a few routines removed initialization of 'rc'
+- Changed the test for bootstrapping temperature
 
 ### Fixed
 
