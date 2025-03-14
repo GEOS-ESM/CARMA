@@ -456,7 +456,7 @@ CONTAINS
    integer                         :: km, nq              ! dist grid indices
    integer                         :: n, dims(3), l
 
-   type(Chem_Array), pointer       :: qa(:)	   ! array of pointers
+   type(Chem_Array), pointer       :: qa(:)       ! array of pointers
    type(MAPL_MetaComp), pointer    :: ggState      ! GEOS Generic State
    type(ESMF_State)                :: internal
    type(ESMF_Field)                :: field
@@ -477,6 +477,8 @@ CONTAINS
    
    integer :: i, j, k, iq, istart, iend
    real, parameter :: rad2deg = 180. / MAPL_PI
+
+   character(len=ESMF_MAXSTR), allocatable :: aero_aci_modes(:)
 
 !  Declare pointers to IMPORT/EXPORT/INTERNAL states 
 !  -------------------------------------------------
@@ -644,11 +646,6 @@ CONTAINS
 !   --------------------
     call ESMF_StateGet(export, 'AERO', aero, __RC__ )
 
-    ! This attribute indicates if the aerosol optics method is implemented or not. 
-    ! Radiation will not call the aerosol optics method unless this attribute is 
-    ! explicitly set to true.
-    call ESMF_AttributeSet(aero, name='implements_aerosol_optics_method', value=.true., __RC__)
-
     aero_state_aerosols = ESMF_FieldBundleCreate(name='AEROSOLS', __RC__)
     call MAPL_StateAdd(aero, aero_state_aerosols, __RC__)
 
@@ -697,6 +694,8 @@ CONTAINS
         call ESMF_AttributeSet(aero, name='cloud_area_fraction_for_aerosol_optics',      value='',    __RC__) ! 'cloud_area_fraction_in_atmosphere_layer_for_aerosol_optics'
 
         ! aerosol optics
+        call ESMF_AttributeSet(aero, name='implements_aerosol_optics_method', value=.true., __RC__)
+
         call ESMF_AttributeSet(aero, name='band_for_aerosol_optics',                     value=0,     __RC__)
         call ESMF_AttributeSet(aero, name='extinction_in_air_due_to_ambient_aerosol',    value='EXT', __RC__)
         call ESMF_AttributeSet(aero, name='single_scattering_albedo_of_ambient_aerosol', value='SSA', __RC__)
@@ -713,16 +712,18 @@ CONTAINS
 
 
         ! aerosol cloud interaction
-        ! PAC: Dynamic aerosol modes please, get configuration figured out
-        aero_aci_modes =  (/'du001    ', 'du002    ', 'du003    ', &
-                            'du004    ', 'du005    ',              &
-                            'ss001    ', 'ss002    ', 'ss003    ', &
-                            'sulforg01', 'sulforg02', 'sulforg03', &
-                            'bcphilic ', 'ocphilic ', 'brcphilic'/)
-        n_modes = size(aero_aci_modes)
-
-        call ESMF_AttributeSet(aero, name='number_of_aerosol_modes', value=n_modes, __RC__)
-        call ESMF_AttributeSet(aero, name='aerosol_modes', itemcount=n_modes, valuelist=aero_aci_modes, __RC__)
+        ! PAC: Not the prettiest way to build a list of aerosol modes
+        allocate(aero_aci_modes(n_aerosols))
+        do ielem = 1, reg%NELEM
+         igroup = reg%igroup(ielem)
+         if(ielem /= gcCARMA%carma%f_group(igroup)%f_ienconc ) cycle
+         do ibin = 1, reg%NBIN
+          aero_aci_modes((ielem-1)*reg%NBIN + ibin - 1) = reg%vname(n)
+         end do
+        end do
+        call ESMF_AttributeSet(aero, name='number_of_aerosol_modes', value=n_aerosols, __RC__)
+        call ESMF_AttributeSet(aero, name='aerosol_modes', itemcount=n_aerosols, valuelist=aero_aci_modes, __RC__)
+        deallocate(aer_aci_modes)
         call ESMF_ConfigGetAttribute(CF, maxclean, default=1.0e-9, label='MAXCLEAN:', __RC__)
         call ESMF_AttributeSet(aero, name='max_q_clean', value=maxclean, __RC__)
         call ESMF_ConfigGetAttribute(CF, CCNtuning, default=1.8, label='CCNTUNING:', __RC__)
