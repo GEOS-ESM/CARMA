@@ -702,53 +702,48 @@ CONTAINS
         call ESMF_AttributeSet(aero, name='single_scattering_albedo_of_ambient_aerosol', value='SSA', __RC__)
         call ESMF_AttributeSet(aero, name='asymmetry_parameter_of_ambient_aerosol',      value='ASY', __RC__)
 
-        ! add PLE to aero state
-        call ESMF_AttributeGet(aero, name='air_pressure_for_aerosol_optics', value=fld_name, __RC__)
-        if (fld_name /= '') then
-            fld = MAPL_FieldCreateEmpty(trim(fld_name), gcCARMA%grid, __RC__)
+        call add_aero (aero, label='air_pressure_for_aerosol_optics', label2='PLE', grid=grid, typekind=MAPL_R4, __RC__)
+        call add_aero (aero, label='relative_humidity_for_aerosol_optics', label2='RH', grid=grid, typekind=MAPL_R4, __RC__)
+        call add_aero (aero, label='extinction_in_air_due_to_ambient_aerosol', label2='EXT', grid=grid, typekind=MAPL_R4, __RC__)
+        call add_aero (aero, label='single_scattering_albedo_of_ambient_aerosol', label2='SSA', grid=grid, typekind=MAPL_R4, __RC__)
+        call add_aero (aero, label='asymmetry_parameter_of_ambient_aerosol', label2='ASY', grid=grid, typekind=MAPL_R4, __RC__)
+        call add_aero (aero, label='monochromatic_extinction_in_air_due_to_ambient_aerosol', label2='monochromatic_EXT', grid=grid, typekind=MAPL_R4, __RC__)
 
-            call MAPL_FieldAllocCommit(fld, dims=MAPL_DimsHorzVert, location=MAPL_VLocationEdge, typekind=MAPL_R4, hw=0, __RC__)
-            call MAPL_StateAdd(aero, fld, __RC__)
-        end if
-
-        ! add RH to Aero state
-        call ESMF_AttributeGet(aero, name='relative_humidity_for_aerosol_optics', value=fld_name, __RC__)
-        if (fld_name /= '') then
-            fld = MAPL_FieldCreateEmpty(trim(fld_name), gcCARMA%grid, __RC__)
-
-            call MAPL_FieldAllocCommit(fld, dims=MAPL_DimsHorzVert, location=MAPL_VLocationCenter, typekind=MAPL_R4, hw=0, __RC__)
-            call MAPL_StateAdd(aero, fld, __RC__)
-        end if
-
-        ! add EXT to aero state
-        call ESMF_AttributeGet(aero, name='extinction_in_air_due_to_ambient_aerosol', value=fld_name, __RC__)
-        if (fld_name /= '') then 
-            fld = MAPL_FieldCreateEmpty(trim(fld_name), gcCARMA%grid, __RC__)
-
-            call MAPL_FieldAllocCommit(fld, dims=MAPL_DimsHorzVert, location=MAPL_VLocationCenter, typekind=MAPL_R4, hw=0, __RC__)            
-            call MAPL_StateAdd(aero, fld, __RC__)
-        end if
-
-        ! add SSA to aero state
-        call ESMF_AttributeGet(aero, name='single_scattering_albedo_of_ambient_aerosol', value=fld_name, __RC__)
-        if (fld_name /= '') then
-            fld = MAPL_FieldCreateEmpty(trim(fld_name), gcCARMA%grid, __RC__)
-
-            call MAPL_FieldAllocCommit(fld, dims=MAPL_DimsHorzVert, location=MAPL_VLocationCenter, typekind=MAPL_R4, hw=0, __RC__)
-            call MAPL_StateAdd(aero, fld, __RC__)
-        end if
-
-        ! add ASY to aero state
-        call ESMF_AttributeGet(aero, name='asymmetry_parameter_of_ambient_aerosol', value=fld_name, RC=STATUS)
-        if (fld_name /= '') then 
-            fld = MAPL_FieldCreateEmpty(trim(fld_name), gcCARMA%grid, __RC__)
-
-            call MAPL_FieldAllocCommit(fld, dims=MAPL_DimsHorzVert, location=MAPL_VLocationCenter, typekind=MAPL_R4, hw=0, __RC__)
-            call MAPL_StateAdd(aero, fld, __RC__)
-        end if
-       
-        ! attach the aerosol optics method
         call ESMF_MethodAdd(aero, label='run_aerosol_optics', userRoutine=run_aerosol_optics, __RC__)
+
+
+        ! aerosol cloud interaction
+        ! PAC: Dynamic aerosol modes please, get configuration figured out
+        aero_aci_modes =  (/'du001    ', 'du002    ', 'du003    ', &
+                            'du004    ', 'du005    ',              &
+                            'ss001    ', 'ss002    ', 'ss003    ', &
+                            'sulforg01', 'sulforg02', 'sulforg03', &
+                            'bcphilic ', 'ocphilic ', 'brcphilic'/)
+        n_modes = size(aero_aci_modes)
+
+        call ESMF_AttributeSet(aero, name='number_of_aerosol_modes', value=n_modes, __RC__)
+        call ESMF_AttributeSet(aero, name='aerosol_modes', itemcount=n_modes, valuelist=aero_aci_modes, __RC__)
+        call ESMF_ConfigGetAttribute(CF, maxclean, default=1.0e-9, label='MAXCLEAN:', __RC__)
+        call ESMF_AttributeSet(aero, name='max_q_clean', value=maxclean, __RC__)
+        call ESMF_ConfigGetAttribute(CF, CCNtuning, default=1.8, label='CCNTUNING:', __RC__)
+        call ESMF_AttributeSet(aero, name='ccn_tuning', value=CCNtuning, __RC__)
+        call ESMF_ConfigGetAttribute( CF, CLDMICRO, Label='CLDMICR_OPTION:',  default="BACM_1M", RC=STATUS)
+        call ESMF_AttributeSet(aero, name='cldmicro', value=CLDMICRO, __RC__)
+
+
+        call add_aero (aero, label='air_temperature', label2='T', grid=grid, typekind=MAPL_R4, __RC__)
+        call add_aero (aero, label='fraction_of_land_type', label2='FRLAND', grid=grid, typekind=MAPL_R4, __RC__)
+        call add_aero (aero, label='width_of_aerosol_mode', label2='SIGMA', grid=grid, typekind=MAPL_R4, __RC__)
+        call add_aero (aero, label='aerosol_number_concentration', label2='NUM', grid=grid, typekind=MAPL_R4, __RC__)
+        call add_aero (aero, label='aerosol_dry_size', label2='DGN', grid=grid, typekind=MAPL_R4, __RC__)
+        call add_aero (aero, label='aerosol_density', label2='density', grid=grid, typekind=MAPL_R4, __RC__)
+        call add_aero (aero, label='aerosol_hygroscopicity', label2='KAPPA', grid=grid, typekind=MAPL_R4, __RC__)
+        call add_aero (aero, label='fraction_of_dust_aerosol', label2='FDUST', grid=grid, typekind=MAPL_R4, __RC__)
+        call add_aero (aero, label='fraction_of_soot_aerosol', label2='FSOOT', grid=grid, typekind=MAPL_R4, __RC__)
+        call add_aero (aero, label='fraction_of_organic_aerosol', label2='FORGANIC', grid=grid, typekind=MAPL_R4, __RC__)
+
+        call ESMF_MethodAdd(aero, label='aerosol_activation_properties', userRoutine=aerosol_activation_properties, __RC__)
+       
 
     end if
 
@@ -770,6 +765,57 @@ CONTAINS
     RETURN_(ESMF_SUCCESS)
 
    END SUBROUTINE Initialize_
+
+!====================================================================================
+   subroutine add_aero (state, label, label2, grid, typekind, ptr, rc)
+
+!    Description: Adds fields to aero state for aerosol optics calcualtions. 
+!                    Original version in GOCART Shared:
+!                    @GOCART/ESMF/Shared/Chem_AeroGeneric.F90 
+
+     implicit none
+
+     type (ESMF_State),                          intent(inout)     :: state
+     character (len=*),                          intent(in   )     :: label
+     character (len=*),                          intent(in   )     :: label2
+     type (ESMF_Grid),                           intent(inout)     :: grid
+     integer,                                    intent(in   )     :: typekind
+     real, pointer, dimension(:,:,:), optional,  intent(in   )     :: ptr
+     integer,                                    intent(  out)     :: rc
+
+     ! locals
+     type (ESMF_Field)                                             :: field
+     character (len=ESMF_MAXSTR)                                   :: field_name
+
+     __Iam__('add_aero')
+
+!----------------------------------------------------------------------------------
+!    Begin...
+
+     call ESMF_AttributeSet (state, name=trim(label), value=trim(label2),  __RC__)
+
+     call ESMF_AttributeGet (state, name=trim(label), value=field_name, __RC__)
+     if (field_name /= '') then
+        field = MAPL_FieldCreateEmpty(trim(field_name), grid, __RC__)
+        if (trim(field_name) == 'PLE') then
+           call MAPL_FieldAllocCommit (field, dims=MAPL_DimsHorzVert, location=MAPL_VLocationEdge, typekind=typekind, hw=0, __RC__)
+        else if ((trim(field_name) == 'FRLAND') .or. (trim(field_name) == 'monochromatic_EXT')) then
+           call MAPL_FieldAllocCommit(field, dims=MAPL_DimsHorzOnly, location=MAPL_VLocationCenter, typekind=MAPL_R4, hw=0, __RC__)
+        else
+           call MAPL_FieldAllocCommit (field, dims=MAPL_DimsHorzVert, location=MAPL_VLocationCenter, typekind=typekind, hw=0, __RC__)
+        end if
+        call MAPL_StateAdd (state, field, __RC__)
+     end if
+
+!   if (field_name /= '') then
+!       field = ptr
+!       call MAPL_StateAdd (state, field, __RC__)
+!   end if
+
+     RETURN_(ESMF_SUCCESS)
+
+  end subroutine add_aero
+!=====================================================================================
 
 
 !-------------------------------------------------------------------------
