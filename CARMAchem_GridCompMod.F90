@@ -189,7 +189,7 @@ CONTAINS
 !                         ------------------
 !
 ! !IMPORT STATE:
-#include "CARMA_ImportSpec___.h"
+#include "CARMAchem_Import___.h"
 
 ! !INTERNAL STATE:
 
@@ -374,7 +374,7 @@ CONTAINS
    VERIFY_(STATUS)
 
 !
-#include "CARMA_ExportSpec___.h"
+#include "CARMAchem_Export___.h"
 
 
 !   Set the profiling timers
@@ -473,16 +473,18 @@ CONTAINS
    type(CARMA_Registry), pointer   :: reg => null()
    type(Chem_Registry), pointer    :: mieReg => null()  ! pointer to registry for CARMA aero_provider
    integer :: nCARMAbegin, nCARMAend, ibin, ielem, igroup, igas
-   real    :: fscav
+   real    :: fscav, maxclean, CCNtuning
+   character(LEN=ESMF_MAXSTR)      :: CLDMICRO
    
    integer :: i, j, k, iq, istart, iend
    real, parameter :: rad2deg = 180. / MAPL_PI
 
    character(len=ESMF_MAXSTR), allocatable :: aero_aci_modes(:)
+   real(MAPL_R4), allocatable :: aero_rmin(:), aero_rmrat(:)
 
 !  Declare pointers to IMPORT/EXPORT/INTERNAL states 
 !  -------------------------------------------------
-#  include "CARMA_DeclarePointer___.h"
+#  include "CARMAchem_DeclarePointer___.h"
 
 !  Get my name and set-up traceback handle
 !  ---------------------------------------
@@ -529,7 +531,7 @@ CONTAINS
 
 !  Get pointers to IMPORT/EXPORT/INTERNAL states 
 !  ---------------------------------------------
-#  include "CARMA_GetPointer___.h"
+#  include "CARMAchem_GetPointer___.h"
 
 !  Associate the Internal State fields with our legacy state 
 !  ---------------------------------------------------------
@@ -697,9 +699,15 @@ CONTAINS
         call ESMF_AttributeSet(aero, name='implements_aerosol_optics_method', value=.true., __RC__)
 
         call ESMF_AttributeSet(aero, name='band_for_aerosol_optics',                     value=0,     __RC__)
+        call ESMF_AttributeSet(aero, name='wavelength_for_aerosol_optics',               value=0,     __RC__)
         call ESMF_AttributeSet(aero, name='extinction_in_air_due_to_ambient_aerosol',    value='EXT', __RC__)
         call ESMF_AttributeSet(aero, name='single_scattering_albedo_of_ambient_aerosol', value='SSA', __RC__)
         call ESMF_AttributeSet(aero, name='asymmetry_parameter_of_ambient_aerosol',      value='ASY', __RC__)
+
+        call ESMF_AttributeSet(aero, name='aerosolName', value='',      __RC__)
+        call ESMF_AttributeSet(aero, name='im',          value=dims(1), __RC__)
+        call ESMF_AttributeSet(aero, name='jm',          value=dims(2), __RC__)
+        call ESMF_AttributeSet(aero, name='km',          value=dims(3), __RC__)
 
         call add_aero (aero, label='air_pressure_for_aerosol_optics', label2='PLE', grid=grid, typekind=MAPL_R4, __RC__)
         call add_aero (aero, label='relative_humidity_for_aerosol_optics', label2='RH', grid=grid, typekind=MAPL_R4, __RC__)
@@ -710,20 +718,29 @@ CONTAINS
 
         call ESMF_MethodAdd(aero, label='run_aerosol_optics', userRoutine=run_aerosol_optics, __RC__)
 
-
         ! aerosol cloud interaction
         ! PAC: Not the prettiest way to build a list of aerosol modes
         allocate(aero_aci_modes(n_aerosols))
+        allocate(aero_rmin(n_aerosols))
+        allocate(aero_rmrat(n_aerosols))
+        n = 1
         do ielem = 1, reg%NELEM
          igroup = reg%igroup(ielem)
          if(ielem /= gcCARMA%carma%f_group(igroup)%f_ienconc ) cycle
          do ibin = 1, reg%NBIN
-          aero_aci_modes((ielem-1)*reg%NBIN + ibin - 1) = reg%vname(n)
+          aero_aci_modes(n) = reg%vname((ielem-1)*reg%NBIN + ibin)
+          aero_rmin(n) = reg%rmin(igroup)
+          aero_rmrat(n) = reg%rmrat(igroup)
+          n = n+1
          end do
         end do
         call ESMF_AttributeSet(aero, name='number_of_aerosol_modes', value=n_aerosols, __RC__)
         call ESMF_AttributeSet(aero, name='aerosol_modes', itemcount=n_aerosols, valuelist=aero_aci_modes, __RC__)
-        deallocate(aer_aci_modes)
+        call ESMF_AttributeSet(aero, name='aerosol_rmin', itemcount=n_aerosols, valuelist=aero_rmin, __RC__)
+        call ESMF_AttributeSet(aero, name='aerosol_rmrat', itemcount=n_aerosols, valuelist=aero_rmrat, __RC__)
+        deallocate(aero_aci_modes)
+        deallocate(aero_rmin)
+        deallocate(aero_rmrat)
         call ESMF_ConfigGetAttribute(CF, maxclean, default=1.0e-9, label='MAXCLEAN:', __RC__)
         call ESMF_AttributeSet(aero, name='max_q_clean', value=maxclean, __RC__)
         call ESMF_ConfigGetAttribute(CF, CCNtuning, default=1.8, label='CCNTUNING:', __RC__)
@@ -801,7 +818,7 @@ CONTAINS
         if (trim(field_name) == 'PLE') then
            call MAPL_FieldAllocCommit (field, dims=MAPL_DimsHorzVert, location=MAPL_VLocationEdge, typekind=typekind, hw=0, __RC__)
         else if ((trim(field_name) == 'FRLAND') .or. (trim(field_name) == 'monochromatic_EXT')) then
-           call MAPL_FieldAllocCommit(field, dims=MAPL_DimsHorzOnly, location=MAPL_VLocationCenter, typekind=MAPL_R4, hw=0, __RC__)
+            call MAPL_FieldAllocCommit(field, dims=MAPL_DimsHorzOnly, location=MAPL_VLocationCenter, typekind=typekind, hw=0, __RC__)
         else
            call MAPL_FieldAllocCommit (field, dims=MAPL_DimsHorzVert, location=MAPL_VLocationCenter, typekind=typekind, hw=0, __RC__)
         end if
@@ -889,7 +906,7 @@ CONTAINS
 
 !  Declare pointers to IMPORT/EXPORT/INTERNAL states 
 !  -------------------------------------------------
-#  include "CARMA_DeclarePointer___.h"
+#  include "CARMAchem_DeclarePointer___.h"
 
 !  Get my name and set-up traceback handle
 !  ---------------------------------------
@@ -907,7 +924,7 @@ CONTAINS
 
 !  Get pointers to IMPORT/EXPORT/INTERNAL states 
 !  ---------------------------------------------
-#  include "CARMA_GetPointer___.h"
+#  include "CARMAchem_GetPointer___.h"
 
 !  Get parameters from gc and clock
 !  --------------------------------
@@ -1166,6 +1183,7 @@ CONTAINS
    type(CARMA_Registry), pointer   :: r
    CHARACTER(LEN=255) :: string
    integer :: ios, ier(20), i, j, n, rc
+   character(len=1)   :: elem_str
 
 !  Load resource file
 !  ------------------
@@ -1318,7 +1336,8 @@ CONTAINS
 !  Element Characteristics
 !  -----------------------
    allocate ( r%rhop(r%NELEM), r%igroup(r%NELEM), r%itype(r%NELEM), &
-              r%elemname(r%NELEM), r%icomposition(r%NELEM), stat=ios )
+              r%elemname(r%NELEM), r%icomposition(r%NELEM), &
+              r%distribution(r%NELEM, r%NBIN), stat=ios )
    if ( ios /= 0) then
     call final_(100)
     return
@@ -1369,6 +1388,18 @@ CONTAINS
     call final_(101)
     return
    endif
+
+   do i = 1, r%NELEM
+    write(elem_str, '(i0)') i
+    call i90_label ( 'DISTRIBUTION'//elem_str//':', ier(1) )
+    do j = 1, r%NBIN
+     r%distribution(i,j) = i90_gfloat(ier(i+1))
+    end do
+    if(any(ier(1:r%NELEM+1) /= 0)) then
+     call final_(101)
+     return
+    endif
+   end do
 
 !  Gas Characteristics
 !  -------------------
@@ -1465,7 +1496,7 @@ CONTAINS
 
 !  Black Carbon
 
-!  Smoke
+!  Organic Carbon 
    call i90_label ( 'organic_matter_to_organic_carbon_ratio:', ier(1) )
    r%organic_matter_to_organic_carbon_ratio = i90_gfloat ( ier(2))
    if ( any(ier(1:2) /= 0 )) then
@@ -1497,6 +1528,7 @@ CONTAINS
                      r%doing_point_emissions_sulfate = .TRUE.  ! we are good to go
          end if
    end if
+
 !  Ash
    ier(:) = 0
    call i90_label  ( 'point_emissions_srcfilen_ash:', ier(1) )
@@ -1589,11 +1621,11 @@ CONTAINS
       if ( ios /= 0 ) call final_(68)
      end if
 
-    call i90_label ( 'filename_optical_properties_SM:', ios )
+    call i90_label ( 'filename_optical_properties_OC:', ios )
      if ( ios /= 0 ) then
       call final_(69)
      else
-      call i90_gtoken ( r%sm_optics_file, ios )
+      call i90_gtoken ( r%oc_optics_file, ios )
       if ( ios /= 0 ) call final_(70)
      end if
 
@@ -1644,7 +1676,8 @@ CONTAINS
 !  Element Characteristics
 !  -----------------------
    deallocate ( r%rhop, r%igroup, r%itype, &
-                r%elemname, r%icomposition, stat=ios )
+                r%elemname, r%icomposition, &
+                r%distribution, stat=ios )
    if ( ios /= 0) then
     call final_(100)
     return
@@ -1977,6 +2010,368 @@ contains
     end subroutine mie_
 
  end subroutine run_aerosol_optics
+
+!=====================================================================================================
+
+  subroutine aerosol_activation_properties(state, rc)
+
+    implicit none
+
+!   Arguments
+!   ---------
+    type(ESMF_State)     :: state
+    integer, intent(out) :: rc
+
+!   Local
+!   ---------
+    character(len=ESMF_MAXSTR)      :: mode              ! mode name
+    character(len=ESMF_MAXSTR)      :: mode_             ! lowercase mode name
+
+    type(ESMF_State)                :: child_state
+
+    real(MAPL_R4), dimension(:,:,:), pointer :: ple, temperature, num, diameter, sigma, density, hygroscopicity
+    real(MAPL_R4), dimension(:,:,:), pointer     :: f_dust, f_soot, f_organic
+    !real(ESMF_KIND_R8), dimension(:,:,:), pointer :: ptr_3d_r8
+    real(MAPL_R4), dimension(:,:,:), pointer :: ptr_3d
+    type(ESMF_TypeKind_Flag) :: tk
+    !real(ESMF_KIND_R8), dimension(:,:,:), allocatable :: q
+    real(MAPL_R4), dimension(:,:,:), allocatable :: q
+
+    real                            :: max_clean          ! max mixing ratio before considered polluted
+    real                            :: ccn_tuning         ! tunes conversion factors for sulfate
+    character(LEN=ESMF_MAXSTR)      :: cld_micro
+
+    character(len=ESMF_MAXSTR)      :: fld_name
+    type(ESMF_Field)                :: fld
+
+    integer                         :: i2, j2, k2, n_aerosols
+    integer                         :: b, i, j, n, aerosol_bin
+    integer                         :: varNameLen, c_idx
+
+!    real(ESMF_KIND_R8), allocatable           :: aeroRmin(:), aeroRmrat(:)
+    real(MAPL_R4), allocatable           :: aeroRmin(:), aeroRmrat(:)
+    character (len=ESMF_MAXSTR), allocatable  :: aeroList(:)
+    type (ESMF_FieldBundle)                   :: aerosols
+
+!   auxilliary parameters
+!   ---------------------
+    real, parameter :: densSO4 = 1700.0
+    real, parameter :: densORG = 1600.0
+    real, parameter :: densSS  = 2200.0
+    real, parameter :: densDU  = 1700.0
+    real, parameter :: densBC  = 1600.0
+    real, parameter :: densOC  =  900.0
+    real, parameter :: densBR  =  900.0
+
+    real, parameter :: k_SO4   = 0.65
+    real, parameter :: k_ORG   = 0.20
+    real, parameter :: k_SS    = 1.28
+    real, parameter :: k_DU    = 0.0001
+    real, parameter :: k_BC    = 0.0001
+    real, parameter :: k_OC    = 0.0001
+    real, parameter :: k_BR    = 0.0001
+
+    integer, parameter :: UNKNOWN_AEROSOL_MODE = 2015
+
+    __Iam__('CARMA::aerosol_activation_properties')
+
+!   Begin...
+
+!   Get list of child states within state and add to aeroList
+!   ---------------------------------------------------------
+!    call ESMF_StateGet (state, itemCount=n, __RC__)
+!    allocate (itemList(n), __STAT__)
+!    allocate (itemTypes(n), __STAT__)
+!    call ESMF_StateGet (state, itemNameList=itemList, itemTypeList=itemTypes, __RC__)
+
+!
+!    b=0
+!    do i = 1, n
+!       if ((itemTypes(i) == ESMF_StateItem_State) .and. (trim(itemList(i)(1:2)) /= 'NI')) then
+!          b = b + 1
+!       end if
+!    end do
+!
+!    allocate (aeroList(b), __STAT__)
+!
+!    j = 1
+!    do i = 1, n
+!       if ((itemTypes(i) == ESMF_StateItem_State) .and. (trim(itemList(i)(1:2)) /= 'NI')) then
+!          aeroList(j) = trim(itemList(i))
+!          j = j + 1
+!       end if
+!    end do
+
+
+! The way I did this above...
+! Why don't we just get the list of aerosols from the "aerosol_modes" attribute in the AERO bundle?
+!        allocate(aero_aci_modes(n_aerosols))
+!        do ielem = 1, reg%NELEM
+!         igroup = reg%igroup(ielem)
+!         if(ielem /= gcCARMA%carma%f_group(igroup)%f_ienconc ) cycle
+!         do ibin = 1, reg%NBIN
+!          aero_aci_modes((ielem-1)*reg%NBIN + ibin - 1) = reg%vname(n)
+!         end do
+!        end do
+!        call ESMF_AttributeSet(aero, name='number_of_aerosol_modes', value=n_aerosols, __RC__)
+!        call ESMF_AttributeSet(aero, name='aerosol_modes', itemcount=n_aerosols, valuelist=aero_aci_modes, __RC__)
+!        deallocate(aer_aci_modes)
+
+!   CARMA maintains list of modes
+!   -----------------------------
+    call ESMF_StateGet(state, 'AEROSOLS', aerosols, __RC__)
+    call ESMF_FieldBundleGet(aerosols, fieldCount=n_aerosols, __RC__)
+    allocate(aeroList(n_aerosols), __STAT__)
+    allocate(aeroRmin(n_aerosols), __STAT__)
+    allocate(aeroRmrat(n_aerosols), __STAT__)
+    call ESMF_AttributeGet(state, name='aerosol_modes', valuelist=aeroList, __RC__)
+    call ESMF_AttributeGet(state, name='aerosol_rmin', valuelist=aeroRmin, __RC__)
+    call ESMF_AttributeGet(state, name='aerosol_rmrat', valuelist=aeroRmrat, __RC__)
+
+!   Aerosol mode (set by moist before this function is called)
+!   ----------------------------------------------------------
+    call ESMF_AttributeGet(state, name='aerosol_mode', value=mode, __RC__)
+
+!   Land fraction
+!   -------------
+!    call ESMF_AttributeGet(state, name='fraction_of_land_type', value=fld_name, __RC__)
+!    call MAPL_GetPointer(state, f_land, trim(fld_name), __RC__)
+
+!   Pressure at layer edges
+!   ------------------------
+    call ESMF_AttributeGet(state, name='air_pressure_for_aerosol_optics', value=fld_name, __RC__)
+    call MAPL_GetPointer(state, ple, trim(fld_name), __RC__)
+
+!   Temperature
+!   -----------
+    call ESMF_AttributeGet(state, name='air_temperature', value=fld_name, __RC__)
+    call MAPL_GetPointer(state, temperature, trim(fld_name), __RC__)
+
+    i2 = ubound(temperature, 1)
+    j2 = ubound(temperature, 2)
+    k2 = ubound(temperature, 3)
+
+!   Activation activation properties
+!   --------------------------------
+    call ESMF_AttributeGet(state, name='aerosol_number_concentration', value=fld_name, __RC__)
+    call MAPL_GetPointer(state, num, trim(fld_name), __RC__)
+
+    call ESMF_AttributeGet(state, name='aerosol_dry_size', value=fld_name, __RC__)
+    call MAPL_GetPointer(state, diameter, trim(fld_name), __RC__)
+
+    call ESMF_AttributeGet(state, name='width_of_aerosol_mode', value=fld_name, __RC__)
+    call MAPL_GetPointer(state, sigma, trim(fld_name), __RC__)
+
+    call ESMF_AttributeGet(state, name='aerosol_density', value=fld_name, __RC__)
+    call MAPL_GetPointer(state, density, trim(fld_name), __RC__)
+
+    call ESMF_AttributeGet(state, name='aerosol_hygroscopicity', value=fld_name, __RC__)
+    call MAPL_GetPointer(state, hygroscopicity, trim(fld_name), __RC__)
+
+    call ESMF_AttributeGet(state, name='fraction_of_dust_aerosol', value=fld_name, __RC__)
+    call MAPL_GetPointer(state, f_dust, trim(fld_name), __RC__)
+
+    call ESMF_AttributeGet(state, name='fraction_of_soot_aerosol', value=fld_name, __RC__)
+    call MAPL_GetPointer(state, f_soot, trim(fld_name), __RC__)
+
+    call ESMF_AttributeGet(state, name='fraction_of_organic_aerosol', value=fld_name, __RC__)
+    call MAPL_GetPointer(state, f_organic, trim(fld_name), __RC__)
+
+!   Sea salt scaling fctor
+!   ----------------------
+    call ESMF_AttributeGet(state, name='max_q_clean', value=max_clean, __RC__)
+    call ESMF_AttributeGet(state, name='cldmicro', value=cld_micro, __RC__)
+    call ESMF_AttributeGet(state, name='ccn_tuning', value=ccn_tuning, __RC__)
+
+!   Aerosol mass mixing ratios
+!   --------------------------
+    mode_ = trim(mode)
+    mode_ = ESMF_UtilStringLowerCase(mode_, __RC__)
+    c_idx = index(mode_, '::', back=.true.)
+    read (mode_(c_idx+2:c_idx+4),*) aerosol_bin
+
+    allocate(q(i2,j2,k2),  __STAT__)
+       
+    q = 0.0
+
+! ============================================================================
+! CARMA version...
+! Since only concentration elements are added to the ACI list, here we are
+!    determining speciation solely based on group name.
+! ============================================================================
+    if (index(mode_, 'dust') > 0) then ! Pure dust
+        do i = 1, size(aeroList)
+           if (index(aeroList(i), 'dust') > 0 .and. index(aeroList(i), '::', back=.true.) == c_idx) then
+
+              call ESMF_FieldBundleGet(aerosols, trim(aeroList(i)), field=fld, __RC__)
+              call ESMF_FieldGet(fld, typekind=tk, __RC__)
+
+              call ESMF_FieldGet(fld, farrayPtr=ptr_3d, __RC__)
+              q = q + ptr_3d
+
+              hygroscopicity = k_DU
+              density = densDU
+              ! Diameter of bin center
+              diameter = 2*(((4./3.*MAPL_PI*density*aeroRmin(i)**3.) * &
+                  aeroRmrat(i)**(aerosol_bin - 1))/(4./3.*MAPL_PI*density))**(1./3.)
+              ! Geometric dispersion log(sigma_g)
+              sigma(:,:,:) = log(aeroRmrat(i))/3./4.
+              ! Number concentration to match mass in bin
+              num = q / ((MAPL_PI/6.0) * density * diameter**3 * exp(4.5*sigma**2))
+              ! Fraction of dust
+              f_dust = 1.0
+              ! Fraction of soot
+              f_soot = 0.0
+              ! Fraction of organic
+              f_organic = 0.0
+          end if
+        end do
+    else if (index(mode_, 'sulfate') > 0) then ! Pure sulfate
+        do i = 1, size(aeroList)
+           if (index(aeroList(i), 'sulfate') > 0 .and. index(aeroList(i), '::', back=.true.) == c_idx) then
+
+              call ESMF_FieldBundleGet(aerosols, trim(aeroList(i)), field=fld, __RC__)
+              call ESMF_FieldGet(fld, typekind=tk, __RC__)
+
+              call ESMF_FieldGet(fld, farrayPtr=ptr_3d, __RC__)
+              q = q + ptr_3d
+
+              hygroscopicity = k_SO4
+              density = densSO4 ! PAC: should this be the wet density?
+              ! Diameter of bin center
+              diameter = 2*(((4./3.*MAPL_PI*density*aeroRmin(i)**3.) * &
+                  aeroRmrat(i)**(aerosol_bin - 1))/(4./3.*MAPL_PI*density))**(1./3.)
+              ! Geometric dispersion log(sigma_g)
+              sigma(:,:,:) = log(aeroRmrat(i))/3./4.
+              ! Number concentration to match mass in bin
+              num = q / ((MAPL_PI/6.0) * density * diameter**3 * exp(4.5*sigma**2))
+              ! Fraction of dust
+              f_dust = 0.0
+              ! Fraction of soot
+              f_soot = 0.0
+              ! Fraction of organic
+              f_organic = 0.0
+          end if
+        end do
+    else if (index(mode_, 'seasalt') > 0) then ! Pure sea salt
+        do i = 1, size(aeroList)
+           if (index(aeroList(i), 'seasalt') > 0 .and. index(aeroList(i), '::', back=.true.) == c_idx) then
+
+              call ESMF_FieldBundleGet(aerosols, trim(aeroList(i)), field=fld, __RC__)
+              call ESMF_FieldGet(fld, typekind=tk, __RC__)
+
+              call ESMF_FieldGet(fld, farrayPtr=ptr_3d, __RC__)
+              q = q + ptr_3d
+
+              hygroscopicity = k_SS
+              density = densSS ! PAC: should this be the wet density?
+              ! Diameter of bin center
+              diameter = 2*(((4./3.*MAPL_PI*density*aeroRmin(i)**3.) * &
+                  aeroRmrat(i)**(aerosol_bin - 1))/(4./3.*MAPL_PI*density))**(1./3.)
+              ! Geometric dispersion log(sigma_g)
+              sigma(:,:,:) = log(aeroRmrat(i))/3./4.
+              ! Number concentration to match mass in bin
+              num = q / ((MAPL_PI/6.0) * density * diameter**3 * exp(4.5*sigma**2))
+              ! Fraction of dust
+              f_dust = 0.0
+              ! Fraction of soot
+              f_soot = 0.0
+              ! Fraction of organic
+              f_organic = 0.0
+          end if
+        end do
+    else if (index(mode_, 'organiccarbon') > 0) then ! Organic carbon
+        do i = 1, size(aeroList)
+           if (index(aeroList(i), 'organiccarbon') > 0 .and. index(aeroList(i), '::', back=.true.) == c_idx) then
+
+              call ESMF_FieldBundleGet(aerosols, trim(aeroList(i)), field=fld, __RC__)
+              call ESMF_FieldGet(fld, typekind=tk, __RC__)
+
+              call ESMF_FieldGet(fld, farrayPtr=ptr_3d, __RC__)
+              q = q + ptr_3d
+
+              hygroscopicity = k_OC
+              density = densOC ! PAC: should this be the wet density?
+              ! Diameter of bin center
+              diameter = 2*(((4./3.*MAPL_PI*density*aeroRmin(i)**3.) * &
+                  aeroRmrat(i)**(aerosol_bin - 1))/(4./3.*MAPL_PI*density))**(1./3.)
+              ! Geometric dispersion log(sigma_g)
+              sigma(:,:,:) = log(aeroRmrat(i))/3./4.
+              ! Number concentration to match mass in bin
+              num = q / ((MAPL_PI/6.0) * density * diameter**3 * exp(4.5*sigma**2))
+              ! Fraction of dust
+              f_dust = 0.0
+              ! Fraction of soot
+              f_soot = 0.0
+              ! Fraction of organic
+              f_organic = 1.0
+          end if
+        end do
+    else if (index(mode_, 'blackcarbon') > 0) then ! Black carbon
+        do i = 1, size(aeroList)
+           if (index(aeroList(i), 'blackcarbon') > 0 .and. index(aeroList(i), '::', back=.true.) == c_idx) then
+
+              call ESMF_FieldBundleGet(aerosols, trim(aeroList(i)), field=fld, __RC__)
+              call ESMF_FieldGet(fld, typekind=tk, __RC__)
+
+              call ESMF_FieldGet(fld, farrayPtr=ptr_3d, __RC__)
+              q = q + ptr_3d
+
+              hygroscopicity = k_BC
+              density = densBC ! PAC: should this be the wet density?
+              ! Diameter of bin center
+              diameter = 2*(((4./3.*MAPL_PI*density*aeroRmin(i)**3.) * &
+                  aeroRmrat(i)**(aerosol_bin - 1))/(4./3.*MAPL_PI*density))**(1./3.)
+              ! Geometric dispersion log(sigma_g)
+              sigma(:,:,:) = log(aeroRmrat(i))/3./4.
+              ! Number concentration to match mass in bin
+              num = q / ((MAPL_PI/6.0) * density * diameter**3 * exp(4.5*sigma**2))
+              ! Fraction of dust
+              f_dust = 0.0
+              ! Fraction of soot
+              f_soot = 1.0
+              ! Fraction of organic
+              f_organic = 0.0
+          end if
+        end do
+    else if (index(mode_, 'mixedp') > 0) then ! mixed group
+        do i = 1, size(aeroList)
+           if (index(aeroList(i), 'mixedp') > 0 .and. index(aeroList(i), '::', back=.true.) == c_idx) then
+
+              call ESMF_FieldBundleGet(aerosols, trim(aeroList(i)), field=fld, __RC__)
+              call ESMF_FieldGet(fld, typekind=tk, __RC__)
+
+              call ESMF_FieldGet(fld, farrayPtr=ptr_3d, __RC__)
+              q = q + ptr_3d
+
+              hygroscopicity = k_SO4 ! PAC: We need to have some type of mixing here
+              density = densSO4
+              ! Diameter of bin center
+              diameter = 2*(((4./3.*MAPL_PI*density*aeroRmin(i)**3.) * &
+                  aeroRmrat(i)**(aerosol_bin - 1))/(4./3.*MAPL_PI*density))**(1./3.)
+              ! Geometric dispersion log(sigma_g)
+              sigma(:,:,:) = log(aeroRmrat(i))/3./4.
+              ! Number concentration to match mass in bin
+              num = q / ((MAPL_PI/6.0) * density * diameter**3 * exp(4.5*sigma**2))
+              ! Fraction of dust PAC: need to speciate mixed group
+              f_dust = 0.0
+              ! Fraction of soot
+              f_soot = 0.0
+              ! Fraction of organic
+              f_organic = 0.0
+          end if
+        end do
+    end if ! Speciation
+    ! ============================================================================
+
+    deallocate(q, __STAT__)
+    deallocate(aeroList, __STAT__)
+    deallocate(aeroRmin, __STAT__)
+    deallocate(aeroRmrat, __STAT__)
+
+    RETURN_(ESMF_SUCCESS)
+
+  end subroutine aerosol_activation_properties
 
 
 
