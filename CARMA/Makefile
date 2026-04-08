@@ -171,12 +171,18 @@ parma_column_dust : $(CARMA_OBJ) atmosphere_mod.o
 	cp ../../interfaces/python/parma_column_dust_analysis.py .
 	cp ../../interfaces/python/utils/*.py .
 	cp -r ../../carma_tools .
+parma_column_smoke : $(CARMA_OBJ) atmosphere_mod.o
+	f2py -c --fcompiler=gfortran --f90flags=-ffree-line-length-none -lgomp -I. atmosphere_mod.o $(CARMA_OBJ) -m carma_column_smoke --f2cmap .f2py_f2cmap ../../interfaces/carma_column_smoke.F90
+	#python3 -m numpy.f2py -c --f90flags=-ffree-line-length-none ../../interfaces/carma_column.F90 atmosphere_mod.o $(CARMA_OBJ) -m carma_column --f2cmap .f2py_f2cmap
+	cp ../../interfaces/python/parma_column_smoke.py .
+	cp ../../interfaces/python/utils/*.py .
+	cp -r ../../carma_tools .
 
 # Compile everything.
 all : FALLTEST.exe COAGTEST.exe BCOCTEST.exe BC2GTEST.exe GROWTEST.exe INITTEST.exe \
 MIETEST.exe NUCTEST.exe SIGMAFALLTEST.exe SWELLTEST.exe VDIFTEST.exe DRYDEPTEST.exe \
 SIGMADRYDEPTEST.exe PHEATTEST.exe SCFALLTEST.exe CARMA.exe GROWSUBTEST.exe \
-SULFATETEST.exe NUC2TEST.exe GROWINTEST.exe GROWCLRTEST.exe parma_box
+SULFATETEST.exe NUC2TEST.exe GROWINTEST.exe GROWCLRTEST.exe
 
 # Compile all of the documentation.
 doc : $(CARMA_DOC) $(TEST_DOC)
