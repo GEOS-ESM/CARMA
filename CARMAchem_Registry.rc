@@ -16,8 +16,8 @@
 
 # CARMA dimensioning parameters
 NBIN:      22
-NGROUP:    4
-NELEM:     4 
+NGROUP:    5
+NELEM:     5 
 NSOLUTE:   0 
 NGAS:      3
 NWAVE:     0 
@@ -131,14 +131,12 @@ point_emissions_srcfilen_sulfate: /dev/null
   filename_optical_properties_BC:  /home/pcolarco/silo/fvInput/chemistry/AerosolOptics/v2.1.0/x/optics_carmaBC.v2.1.0.legacy.nc4
   filename_optical_properties_SM:  /home/pcolarco/silo/fvInput/chemistry/AerosolOptics/v2.1.0/x/optics_carmaOC.v2.1.0.legacy.nc4
   filename_optical_properties_OC:  /home/pcolarco/silo/fvInput/chemistry/AerosolOptics/v2.1.0/x/optics_carmaOC.v2.1.0.legacy.nc4
-  filename_optical_properties_SU:  /home/pcolarco/silo/fvInput/chemistry/AerosolOptics/v2.1.0/x/optics_carmaSUpure.v2.1.0.legacy.nc4
+  # filename_optical_properties_SU:  /home/pcolarco/silo/fvInput/chemistry/AerosolOptics/v2.1.0/x/optics_carmaSUpure.v2.1.0.legacy.nc4
+  filename_optical_properties_SU:  /discover/nobackup/pcolarco/fvInput/x/carma_optics_SU.v6.nbin=30.nc
   filename_optical_properties_NI:  /home/pcolarco/silo/fvInput/chemistry/AerosolOptics/v2.1.0/x/optics_carmaOC.v2.1.0.legacy.nc4
   filename_optical_properties_BRC:  /home/pcolarco/silo/fvInput/chemistry/AerosolOptics/v2.1.0/x/optics_carmaOC.v2.1.0.legacy.nc4
 
 # Band optical properties
-# Current is a place holder...need CARMA tables for RRTMG, these are just
-# GOCART tables made to cause code not to crash (although it will if CARMA is
-# AeroProvider)
   NUM_BANDS: 30
   DU_OPTICS: /home/pcolarco/silo/fvInput/chemistry/AerosolOptics/v2.1.0/x/opticsBands_carmaDU.v2.1.0.legacy.RRTMG.nc4
   SS_OPTICS: /home/pcolarco/silo/fvInput/chemistry/AerosolOptics/v2.1.0/x/opticsBands_carmaSS.v2.1.0.legacy.RRTMG.nc4
