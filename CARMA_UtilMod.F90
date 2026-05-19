@@ -426,7 +426,7 @@ CONTAINS
 !   Black Carbon
 !   ------------------------------------------------------------------------
     if(  groupname == 'BLACKCARBON' .or. &
-       ( reg%igrp_organic_carbon < 1 .AND. groupname == 'MIXEDP' .AND. elemname  == 'BLACKCARBON'      ) ) then
+       ( reg%igrp_black_carbon < 1 .AND. groupname == 'MIXEDP' .AND. elemname  == 'BLACKCARBON'      ) ) then
 
 !     Do the emission calculation
       if( associated(BC_emis)) BC_emis(:,:) = 0.
