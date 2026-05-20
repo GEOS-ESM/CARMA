@@ -197,8 +197,8 @@ CONTAINS
                                       ustar, pblh, z0h, shflux, precc, precl, &
                                       frocean, frseaice, frland, tskin, area
    REAL, POINTER, DIMENSION(:,:)   :: emissions, memissions, nemissions, dqa
-   REAL, POINTER, DIMENSION(:,:)   :: biofuel_src, ebcant1_src, ebcant2_src, &
-                                      oc_ship_src, biomass_src, biogenic_src
+   REAL, POINTER, DIMENSION(:,:)   :: biofuel_src, ant1_src, ant2_src, &
+                                      ship_src, biomass_src, biogenic_src
    real, pointer, dimension(:,:)   :: du_emis, ss_emis, bc_emis, ash_emis, oc_emis
 
    type(CARMA_Registry), pointer :: reg => null()
@@ -433,22 +433,22 @@ CONTAINS
 
       call MAPL_GetPointer( impChem, biomass_src,  'CARMA_BC_BIOMASS', __RC__)
       call MAPL_GetPointer( impChem, biofuel_src,  'CARMA_BC_BIOFUEL', __RC__)
-      call MAPL_GetPointer( impChem, ebcant1_src,  'CARMA_BC_ANTEOC1', __RC__)
-      call MAPL_GetPointer( impChem, ebcant2_src,  'CARMA_BC_ANTEOC2', __RC__)
-      call MAPL_GetPointer( impChem, oc_ship_src,  'CARMA_BC_SHIP', __RC__)
+      call MAPL_GetPointer( impChem, ant1_src,     'CARMA_BC_ANTEBC1', __RC__)
+      call MAPL_GetPointer( impChem, ant2_src,     'CARMA_BC_ANTEBC2', __RC__)
+      call MAPL_GetPointer( impChem, ship_src,     'CARMA_BC_SHIP', __RC__)
       call MAPL_GetPointer( impChem, biogenic_src, 'CARMA_BC_TERPENE', __RC__)
 
       if(associated(BC_emis)) BC_emis = ( biomass_src + biofuel_src + &
-                                          oc_ship_src + ebcant1_src + &
-                                          ebcant2_src + &
+                                          ship_src + ant1_src + &
+                                          ant2_src + &
                                           biogenic_src * reg%fraction_terpene_to_organic_carbon) &
                                        *  reg%organic_matter_to_organic_carbon_ratio
 
       do ibin = 1, reg%NBIN
        n = n1 + (ielem-1)*reg%NBIN + ibin - 1
        dqa =     reg%distribution(ielem, ibin) * dtime *grav_mks / (ple(:,:,km)-ple(:,:,km-1)) &
-             * (   biomass_src + biofuel_src + oc_ship_src &
-                 + ebcant1_src + ebcant2_src) * reg%organic_matter_to_organic_carbon_ratio
+             * (   biomass_src + biofuel_src + ship_src &
+                 + ant1_src + ant2_src) * reg%organic_matter_to_organic_carbon_ratio
 !      biogenic source
        dqa = dqa + reg%distribution(ielem, ibin) * dtime *grav_mks / (ple(:,:,km)-ple(:,:,km-1)) * biogenic_src 
        qa(n)%data3d(:,:,km) = qa(n)%data3d(:,:,km) + dqa
@@ -477,26 +477,27 @@ CONTAINS
 
       call MAPL_GetPointer( impChem, biomass_src,  'CARMA_OC_BIOMASS', __RC__)
       call MAPL_GetPointer( impChem, biofuel_src,  'CARMA_OC_BIOFUEL', __RC__)
-      call MAPL_GetPointer( impChem, ebcant1_src,  'CARMA_OC_ANTEOC1', __RC__)
-      call MAPL_GetPointer( impChem, ebcant2_src,  'CARMA_OC_ANTEOC2', __RC__)
-      call MAPL_GetPointer( impChem, oc_ship_src,  'CARMA_OC_SHIP', __RC__)
-      call MAPL_GetPointer( impChem, biogenic_src, 'CARMA_OC_TERPENE', __RC__)
+      call MAPL_GetPointer( impChem, ant1_src,     'CARMA_OC_ANTEOC1', __RC__)
+      call MAPL_GetPointer( impChem, ant2_src,     'CARMA_OC_ANTEOC2', __RC__)
+      call MAPL_GetPointer( impChem, ship_src,     'CARMA_OC_SHIP', __RC__)
+!      call MAPL_GetPointer( impChem, biogenic_src, 'CARMA_OC_TERPENE', __RC__)
       call MAPL_GetPointer( impChem, psoa_anthro,  'CARMA_PSOA_ANTHRO_VOC', __RC__)
       call MAPL_GetPointer( impChem, psoa_biomass, 'CARMA_PSOA_BIOB_VOC', __RC__)
 
       if(associated(OC_emis)) OC_emis = ( biomass_src + biofuel_src + &
-                                          oc_ship_src + ebcant1_src + &
-                                          ebcant2_src + &
-                                          biogenic_src * reg%fraction_terpene_to_organic_carbon) &
-                                       *  reg%organic_matter_to_organic_carbon_ratio
+                                          ship_src + ant1_src + &
+                                          ant2_src)
+!      + &
+!                                          biogenic_src * reg%fraction_terpene_to_organic_carbon) &
+!                                       *  reg%organic_matter_to_organic_carbon_ratio
 
       do ibin = 1, reg%NBIN
        n = n1 + (ielem-1)*reg%NBIN + ibin - 1
        dqa =     reg%distribution(ielem, ibin) * dtime *grav_mks / (ple(:,:,km)-ple(:,:,km-1)) &
-             * (   biomass_src + biofuel_src + oc_ship_src &
-                 + ebcant1_src + ebcant2_src) * reg%organic_matter_to_organic_carbon_ratio
+             * (   biomass_src + biofuel_src + ship_src &
+                 + ant1_src + ant2_src) * reg%organic_matter_to_organic_carbon_ratio
 !      biogenic source
-       dqa = dqa + reg%distribution(ielem, ibin) * dtime *grav_mks / (ple(:,:,km)-ple(:,:,km-1)) * biogenic_src 
+!       dqa = dqa + reg%distribution(ielem, ibin) * dtime *grav_mks / (ple(:,:,km)-ple(:,:,km-1)) * biogenic_src 
        qa(n)%data3d(:,:,km) = qa(n)%data3d(:,:,km) + dqa
 !      If primary emissions are going into a mixed group element (test by
 !      checking no pure oc group but oc element is not "pc") then need to 

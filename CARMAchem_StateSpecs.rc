@@ -46,10 +46,9 @@ CARMA_OC_SHIP            | 1           | xy  | N |          | organic carbon shi
 CARMA_OC_TERPENE         | kg m-2 s-1  | xy  | N |          | monoterpene emissions
 CARMA_BC_BIOMASS         | 1           | xy  | N |          | black carbon biomass burning
 CARMA_BC_BIOFUEL         | 1           | xy  | N |          | black carbon biofuel
-CARMA_BC_ANTEOC1         | 1           | xy  | N |          | black carbon anthro (1)
-CARMA_BC_ANTEOC2         | 1           | xy  | N |          | black carbon anthro (2)
+CARMA_BC_ANTEBC1         | 1           | xy  | N |          | black carbon anthro (1)
+CARMA_BC_ANTEBC2         | 1           | xy  | N |          | black carbon anthro (2)
 CARMA_BC_SHIP            | 1           | xy  | N |          | black carbon ship
-CARMA_BC_TERPENE         | kg m-2 s-1  | xy  | N |          | monoterpene emissions
 CARMA_PSOA_ANTHRO_VOC    | kg m-3 s-1  | xyz | C |          | SOA production anthropogenic VOC
 CARMA_PSOA_BIOB_VOC      | kg m-3 s-1  | xyz | C |          | SOA production biomass burning VOC
 CARMA_PSO4TOT            | kg m-2 s-1  | xyz | C |          | so4- production from chemistry
