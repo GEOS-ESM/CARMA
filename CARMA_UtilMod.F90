@@ -436,13 +436,14 @@ CONTAINS
       call MAPL_GetPointer( impChem, ant1_src,     'CARMA_BC_ANTEBC1', __RC__)
       call MAPL_GetPointer( impChem, ant2_src,     'CARMA_BC_ANTEBC2', __RC__)
       call MAPL_GetPointer( impChem, ship_src,     'CARMA_BC_SHIP', __RC__)
-      call MAPL_GetPointer( impChem, biogenic_src, 'CARMA_BC_TERPENE', __RC__)
+!      call MAPL_GetPointer( impChem, biogenic_src, 'CARMA_BC_TERPENE', __RC__)
 
       if(associated(BC_emis)) BC_emis = ( biomass_src + biofuel_src + &
                                           ship_src + ant1_src + &
-                                          ant2_src + &
-                                          biogenic_src * reg%fraction_terpene_to_organic_carbon) &
-                                       *  reg%organic_matter_to_organic_carbon_ratio
+                                          ant2_src)
+!      + &
+!                                          biogenic_src * reg%fraction_terpene_to_organic_carbon) &
+!                                       *  reg%organic_matter_to_organic_carbon_ratio
 
       do ibin = 1, reg%NBIN
        n = n1 + (ielem-1)*reg%NBIN + ibin - 1
@@ -450,7 +451,7 @@ CONTAINS
              * (   biomass_src + biofuel_src + ship_src &
                  + ant1_src + ant2_src) * reg%organic_matter_to_organic_carbon_ratio
 !      biogenic source
-       dqa = dqa + reg%distribution(ielem, ibin) * dtime *grav_mks / (ple(:,:,km)-ple(:,:,km-1)) * biogenic_src 
+!       dqa = dqa + reg%distribution(ielem, ibin) * dtime *grav_mks / (ple(:,:,km)-ple(:,:,km-1)) * biogenic_src 
        qa(n)%data3d(:,:,km) = qa(n)%data3d(:,:,km) + dqa
 !      If primary emissions are going into a mixed group element (test by
 !      checking no pure oc group but oc element is not "pc") then need to 
@@ -480,16 +481,15 @@ CONTAINS
       call MAPL_GetPointer( impChem, ant1_src,     'CARMA_OC_ANTEOC1', __RC__)
       call MAPL_GetPointer( impChem, ant2_src,     'CARMA_OC_ANTEOC2', __RC__)
       call MAPL_GetPointer( impChem, ship_src,     'CARMA_OC_SHIP', __RC__)
-!      call MAPL_GetPointer( impChem, biogenic_src, 'CARMA_OC_TERPENE', __RC__)
+      call MAPL_GetPointer( impChem, biogenic_src, 'CARMA_OC_TERPENE', __RC__)
       call MAPL_GetPointer( impChem, psoa_anthro,  'CARMA_PSOA_ANTHRO_VOC', __RC__)
       call MAPL_GetPointer( impChem, psoa_biomass, 'CARMA_PSOA_BIOB_VOC', __RC__)
 
       if(associated(OC_emis)) OC_emis = ( biomass_src + biofuel_src + &
                                           ship_src + ant1_src + &
-                                          ant2_src)
-!      + &
-!                                          biogenic_src * reg%fraction_terpene_to_organic_carbon) &
-!                                       *  reg%organic_matter_to_organic_carbon_ratio
+                                          ant2_src + &
+                                          biogenic_src * reg%fraction_terpene_to_organic_carbon) &
+                                       *  reg%organic_matter_to_organic_carbon_ratio
 
       do ibin = 1, reg%NBIN
        n = n1 + (ielem-1)*reg%NBIN + ibin - 1
