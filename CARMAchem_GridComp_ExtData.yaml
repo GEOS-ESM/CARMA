@@ -1,64 +1,156 @@
 Collections:
-  CARMAchem_AeroCom.noship_OC_src.sfc.x360_y181_t44.19780703_12z_20210703_12z.nc:
-    template: ExtData/AeroCom/sfc/AeroCom.noship_OC_src.sfc.x360_y181_t44.19780703_12z_20210703_12z.nc
-  CARMAchem_edgar-v41.emis_oc.navigation.x360_y181_t47.19750703T12z_20210703T00z.nc4:
-    template: ExtData/MERRA2/sfc/edgar-v41.emis_oc.navigation.x360_y181_t47.19750703T12z_20210703T00z.nc4
-  CARMAchem_geia.terpene_biogenic.x144_y91_t12.1971.nc:
+  CARMA_gocart.dust_source.v5a.x1152_y721.nc:
+    template: ExtData/chemistry/DUST/v0.0.0/sfc/gocart.dust_source.v5a.x1152_y721.nc
+  CARMA_OC-em-AIR-anthro_input4MIPs_emissions_CMIP_CEDS-2021-04-21_gn__aviation.x576_y361_z72_t12.%y4.nc4:
+    template: ExtData/chemistry/CEDS/v2021-04-21-revised/L72/OC-em-AIR-anthro_input4MIPs_emissions_CMIP_CEDS-2021-04-21_gn__aviation.x576_y361_z72_t12.%y4.nc4
+    valid_range: "1979-01-15T12:00/2019-12-15T12:00"
+  CARMA_OC-em-anthro_CMIP_CEDS_gn_energy.x2304_y1441_t12.%y4.nc4:
+    template: ExtData/chemistry/CEDS/v2021-04-21-revised/sfc/OC-em-anthro_CMIP_CEDS_gn_energy.x2304_y1441_t12.%y4.nc4
+    valid_range: "1979-01-15T12:00/2019-12-15T12:00"
+  CARMA_OC-em-anthro_CMIP_CEDS_gn_nonenergy.x2304_y1441_t12.%y4.nc4:
+    template: ExtData/chemistry/CEDS/v2021-04-21-revised/sfc/OC-em-anthro_CMIP_CEDS_gn_nonenergy.x2304_y1441_t12.%y4.nc4
+    valid_range: "1979-01-15T12:00/2019-12-15T12:00"
+  CARMA_OC-em-anthro_CMIP_CEDS_gn_shipping.x2304_y1441_t12.%y4.nc4:
+    template: ExtData/chemistry/CEDS/v2021-04-21-revised/sfc/OC-em-anthro_CMIP_CEDS_gn_shipping.x2304_y1441_t12.%y4.nc4
+    valid_range: "1979-01-15T12:00/2019-12-15T12:00"
+  CARMA_OC-em-geia.terpene_biogenic.x144_y91_t12.1971.nc:
     template: ExtData/PIESA/sfc/geia.terpene_biogenic.x144_y91_t12.1971.nc
-  CARMAchem_gocart.dust_source.v5a.x1152_y721.nc:
-    template: ExtData/PIESA/sfc/gocart.dust_source.v5a.x1152_y721.nc
-  CARMAchem_qfed2.emis_oc.005.%y4%m2%d2.nc4:
-    template: ExtData/PIESA/sfc/QFED/v2.4r6/Y%y4/M%m2/qfed2.emis_oc.005.%y4%m2%d2.nc4
+  CARMA_BC-em-AIR-anthro_input4MIPs_emissions_CMIP_CEDS-2021-04-21_gn__aviation.x576_y361_z72_t12.%y4.nc4:
+    template: ExtData/chemistry/CEDS/v2021-04-21-revised/L72/BC-em-AIR-anthro_input4MIPs_emissions_CMIP_CEDS-2021-04-21_gn__aviation.x576_y361_z72_t12.%y4.nc4
+    valid_range: "1979-01-15T12:00/2019-12-15T12:00"
+  CARMA_BC-em-anthro_CMIP_CEDS_gn_energy.x2304_y1441_t12.%y4.nc4:
+    template: ExtData/chemistry/CEDS/v2021-04-21-revised/sfc/BC-em-anthro_CMIP_CEDS_gn_energy.x2304_y1441_t12.%y4.nc4
+    valid_range: "1979-01-15T12:00/2019-12-15T12:00"
+  CARMA_BC-em-anthro_CMIP_CEDS_gn_nonenergy.x2304_y1441_t12.%y4.nc4:
+    template: ExtData/chemistry/CEDS/v2021-04-21-revised/sfc/BC-em-anthro_CMIP_CEDS_gn_nonenergy.x2304_y1441_t12.%y4.nc4
+    valid_range: "1979-01-15T12:00/2019-12-15T12:00"
+  CARMA_BC-em-anthro_CMIP_CEDS_gn_shipping.x2304_y1441_t12.%y4.nc4:
+    template: ExtData/chemistry/CEDS/v2021-04-21-revised/sfc/BC-em-anthro_CMIP_CEDS_gn_shipping.x2304_y1441_t12.%y4.nc4
+    valid_range: "1979-01-15T12:00/2019-12-15T12:00"
+  CARMA_qfed2.emis_bc.061.%y4%m2%d2.nc4:
+    template: ExtData/chemistry/QFED/v2.6r1/sfc/0.1/Y%y4/M%m2/qfed2.emis_bc.061.%y4%m2%d2.nc4
+    valid_range: "2000-02-29T12:00/2025-01-01"
+  CARMA_qfed2.emis_oc.061.%y4%m2%d2.nc4:
+    template: ExtData/chemistry/QFED/v2.6r1/sfc/0.1/Y%y4/M%m2/qfed2.emis_oc.061.%y4%m2%d2.nc4
+    valid_range: "2000-02-29T12:00/2025-01-01"
+  CARMA_hfed.emis_bc.x576_y361.%y4%m2.nc4:
+    template: ExtData/chemistry/HFED/v1.0/Y%y4/M%m2/hfed.emis_bc.x576_y361.%y4%m2.nc4
+    valid_range: "1960-01-16T12:00/2000-12-16T12:00"
+  CARMA_hfed.emis_oc.x576_y361.%y4%m2.nc4:
+    template: ExtData/chemistry/HFED/v1.0/Y%y4/M%m2/hfed.emis_oc.x576_y361.%y4%m2.nc4
+    valid_range: "1960-01-16T12:00/2000-12-16T12:00"
+  CARMA_qfed_emis_x3600y1800_bc.v3_2_2.%y4%m2%d2.nc4:
+    template: ExtData/chemistry/QFED/v3.2r2/sfc/0.1/QFED/Y%y4/M%m2/qfed_emis_x3600y1800_bc.v3_2_2.%y4%m2%d2.nc4
+    valid_range: "2023-03-01T12:00/2028-01-01"
+  CARMA_qfed_emis_x3600y1800_oc.v3_2_2.%y4%m2%d2.nc4:
+    template: ExtData/chemistry/QFED/v3.2r2/sfc/0.1/QFED/Y%y4/M%m2/qfed_emis_x3600y1800_oc.v3_2_2.%y4%m2%d2.nc4
+    valid_range: "2023-03-01T12:00/2028-01-01"
 
 Samplings:
-  CARMAchem_sample_0:
+  CARMA_sample_0:
     extrapolation: persist_closest
-  CARMAchem_sample_1:
+  CARMA_sample_1:
     update_frequency: PT24H
     update_offset: PT12H
     update_reference_time: '0'
-  CARMAchem_sample_2:
+  CARMA_sample_2:
     extrapolation: clim
     update_frequency: PT24H
     update_offset: PT12H
     update_reference_time: '0'
+  CARMA_sample_3:
+    extrapolation: clim
+    update_frequency: PT24H
+    update_offset: PT12H
+    update_reference_time: '0'
+    source_time: "2019-01-15T12:00/2019-12-15T00:00:00"
 
 Exports:
   CARMA_DU_SRC:
-    collection: CARMAchem_gocart.dust_source.v5a.x1152_y721.nc
+    collection: CARMA_gocart.dust_source.v5a.x1152_y721.nc
     regrid: CONSERVE
-    sample: CARMAchem_sample_0
+    sample: CARMA_sample_0
     variable: du_src
-  CARMA_OC_TERPENE:
-    collection: CARMAchem_geia.terpene_biogenic.x144_y91_t12.1971.nc
-    regrid: CONSERVE
-    sample: CARMAchem_sample_2
-    variable: terpene
-  CARMA_SM_ANTEOC1:
-    collection: CARMAchem_AeroCom.noship_OC_src.sfc.x360_y181_t44.19780703_12z_20210703_12z.nc
-    regrid: CONSERVE
-    sample: CARMAchem_sample_2
-    variable: anteoc1
-  CARMA_SM_ANTEOC2:
+
+  CARMA_BC_AIRCRAFT:
+    - {starting: "1979-01-15T12:00", collection: CARMA_BC-em-AIR-anthro_input4MIPs_emissions_CMIP_CEDS-2021-04-21_gn__aviation.x576_y361_z72_t12.%y4.nc4, sample: CARMA_sample_1, regrid: CONSERVE, variable: bc_aviation}
+    - {starting: "2019-12-15T12:00", collection: CARMA_BC-em-AIR-anthro_input4MIPs_emissions_CMIP_CEDS-2021-04-21_gn__aviation.x576_y361_z72_t12.%y4.nc4, regrid: CONSERVE, sample: CARMA_sample_3, variable: bc_aviation}
+  CARMA_BC_ANTEBC1:
+    - {starting: "1979-01-15T12:00", collection: CARMA_BC-em-anthro_CMIP_CEDS_gn_nonenergy.x2304_y1441_t12.%y4.nc4, sample: CARMA_sample_1, regrid: CONSERVE, variable: bc_nonenergy}
+    - {starting: "2019-12-15T12:00", collection: CARMA_BC-em-anthro_CMIP_CEDS_gn_nonenergy.x2304_y1441_t12.%y4.nc4, regrid: CONSERVE, sample: CARMA_sample_3, variable: bc_nonenergy}
+  CARMA_BC_ANTEBC2:
+    - {starting: "1979-01-15T12:00", collection: CARMA_BC-em-anthro_CMIP_CEDS_gn_energy.x2304_y1441_t12.%y4.nc4, sample: CARMA_sample_1, regrid: CONSERVE, variable: bc_energy}
+    - {starting: "2019-12-15T12:00", collection: CARMA_BC-em-anthro_CMIP_CEDS_gn_energy.x2304_y1441_t12.%y4.nc4, regrid: CONSERVE, sample: CARMA_sample_3, variable: bc_energy}
+  CARMA_BC_AVIATION_CDS:
     collection: /dev/null
     regrid: CONSERVE
-    sample: CARMAchem_sample_2
-    variable: anteoc2
-  CARMA_SM_BIOFUEL:
+    sample: CARMA_sample_2
+    variable: bc_aviation
+  CARMA_BC_AVIATION_CRS:
     collection: /dev/null
     regrid: CONSERVE
-    sample: CARMAchem_sample_2
+    sample: CARMA_sample_2
+    variable: bc_aviation
+  CARMA_BC_AVIATION_LTO:
+    collection: /dev/null
+    regrid: CONSERVE
+    sample: CARMA_sample_2
+    variable: bc_aviation
+  CARMA_BC_BIOFUEL:
+    collection: /dev/null
+    regrid: CONSERVE
+    sample: CARMA_sample_2
     variable: biofuel
-  CARMA_SM_BIOMASS:
-    collection: CARMAchem_qfed2.emis_oc.005.%y4%m2%d2.nc4
+  CARMA_BC_BIOMASS:
+    - {starting: "1960-01-16T12:00", collection: CARMA_hfed.emis_bc.x576_y361.%y4%m2.nc4, linear_transformation: [0.0, 0.778], regrid: CONSERVE, sample: CARMA_sample_1, variable: biomass}
+    - {starting: "2000-03-01T00:00", collection: CARMA_qfed2.emis_bc.061.%y4%m2%d2.nc4, linear_transformation: [0.0, 0.778], regrid: CONSERVE, sample: CARMA_sample_1, variable: biomass}
+    - {starting: "2023-03-01T00:00", collection: CARMA_qfed_emis_x3600y1800_bc.v3_2_2.%y4%m2%d2.nc4, linear_transformation: [0.0, 0.778], regrid: CONSERVE, sample: CARMA_sample_1, variable: biomass}
+  CARMA_BC_SHIP:
+    - {starting: "1979-01-15T12:00", collection: CARMA_BC-em-anthro_CMIP_CEDS_gn_shipping.x2304_y1441_t12.%y4.nc4, sample: CARMA_sample_1, regrid: CONSERVE, variable: bc_shipping}
+    - {starting: "2019-12-15T12:00", collection: CARMA_BC-em-anthro_CMIP_CEDS_gn_shipping.x2304_y1441_t12.%y4.nc4, regrid: CONSERVE, sample: CARMA_sample_3, variable: bc_shipping}
+    
+  CARMA_OC_TERPENE:
+    collection: CARMA_OC-em-geia.terpene_biogenic.x144_y91_t12.1971.nc
     regrid: CONSERVE
-    sample: CARMAchem_sample_1
-    variable: biomass
-  CARMA_SM_SHIP:
-    collection: CARMAchem_edgar-v41.emis_oc.navigation.x360_y181_t47.19750703T12z_20210703T00z.nc4
+    sample: CARMA_sample_2
+    variable: terpene
+  CARMA_OC_AIRCRAFT:
+    - {starting: "1979-01-15T12:00", collection: CARMA_OC-em-AIR-anthro_input4MIPs_emissions_CMIP_CEDS-2021-04-21_gn__aviation.x576_y361_z72_t12.%y4.nc4, sample: CARMA_sample_1, regrid: CONSERVE, variable: oc_aviation}
+    - {starting: "2019-12-15T12:00", collection: CARMA_OC-em-AIR-anthro_input4MIPs_emissions_CMIP_CEDS-2021-04-21_gn__aviation.x576_y361_z72_t12.%y4.nc4, regrid: CONSERVE, sample: CARMA_sample_3, variable: oc_aviation}
+  CARMA_OC_ANTEOC1:
+    - {starting: "1979-01-15T12:00", collection: CARMA_OC-em-anthro_CMIP_CEDS_gn_nonenergy.x2304_y1441_t12.%y4.nc4, sample: CARMA_sample_1, regrid: CONSERVE, variable: oc_nonenergy}
+    - {starting: "2019-12-15T12:00", collection: CARMA_OC-em-anthro_CMIP_CEDS_gn_nonenergy.x2304_y1441_t12.%y4.nc4, regrid: CONSERVE, sample: CARMA_sample_3, variable: oc_nonenergy}
+  CARMA_OC_ANTEOC2:
+    - {starting: "1979-01-15T12:00", collection: CARMA_OC-em-anthro_CMIP_CEDS_gn_energy.x2304_y1441_t12.%y4.nc4, sample: CARMA_sample_1, regrid: CONSERVE, variable: oc_energy}
+    - {starting: "2019-12-15T12:00", collection: CARMA_OC-em-anthro_CMIP_CEDS_gn_energy.x2304_y1441_t12.%y4.nc4, regrid: CONSERVE, sample: CARMA_sample_3, variable: oc_energy}
+  CARMA_OC_AVIATION_CDS:
+    collection: /dev/null
     regrid: CONSERVE
-    sample: CARMAchem_sample_2
-    variable: oc_ship
+    sample: CARMA_sample_2
+    variable: oc_aviation
+  CARMA_OC_AVIATION_CRS:
+    collection: /dev/null
+    regrid: CONSERVE
+    sample: CARMA_sample_2
+    variable: oc_aviation
+  CARMA_OC_AVIATION_LTO:
+    collection: /dev/null
+    regrid: CONSERVE
+    sample: CARMA_sample_2
+    variable: oc_aviation
+  CARMA_OC_BIOFUEL:
+    collection: /dev/null
+    regrid: CONSERVE
+    sample: CARMA_sample_2
+    variable: biofuel
+  CARMA_OC_BIOMASS:
+    - {starting: "1960-01-16T12:00", collection: CA2G_hfed.emis_oc.x576_y361.%y4%m2.nc4, linear_transformation: [0.0, 0.778], regrid: CONSERVE, sample: CA2G_sample_1, variable: biomass}
+    - {starting: "2000-03-01T00:00", collection: CA2G_qfed2.emis_oc.061.%y4%m2%d2.nc4, linear_transformation: [0.0, 0.778], regrid: CONSERVE, sample: CA2G_sample_1, variable: biomass}
+    - {starting: "2023-03-01T00:00", collection: CA2G_qfed_emis_x3600y1800_oc.v3_2_2.%y4%m2%d2.nc4, linear_transformation: [0.0, 0.778], regrid: CONSERVE, sample: CA2G_sample_1, variable: biomass}
+  CARMA_OC_SHIP:
+    - {starting: "1979-01-15T12:00", collection: CARMA_OC-em-anthro_CMIP_CEDS_gn_shipping.x2304_y1441_t12.%y4.nc4, sample: CARMA_sample_1, regrid: CONSERVE, variable: oc_shipping}
+    - {starting: "2019-12-15T12:00", collection: CARMA_OC-em-anthro_CMIP_CEDS_gn_shipping.x2304_y1441_t12.%y4.nc4, regrid: CONSERVE, sample: CARMA_sample_3, variable: oc_shipping}
+    
   CARMA_PSO4TOT:
     collection: /dev/null
     regrid: CONSERVE
