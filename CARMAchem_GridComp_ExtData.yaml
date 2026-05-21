@@ -108,7 +108,7 @@ Exports:
   CARMA_BC_SHIP:
     - {starting: "1979-01-15T12:00", collection: CARMA_BC-em-anthro_CMIP_CEDS_gn_shipping.x2304_y1441_t12.%y4.nc4, sample: CARMA_sample_1, regrid: CONSERVE, variable: bc_shipping}
     - {starting: "2019-12-15T12:00", collection: CARMA_BC-em-anthro_CMIP_CEDS_gn_shipping.x2304_y1441_t12.%y4.nc4, regrid: CONSERVE, sample: CARMA_sample_3, variable: bc_shipping}
-    
+
   CARMA_OC_TERPENE:
     collection: CARMA_OC-em-geia.terpene_biogenic.x144_y91_t12.1971.nc
     regrid: CONSERVE
@@ -150,7 +150,7 @@ Exports:
   CARMA_OC_SHIP:
     - {starting: "1979-01-15T12:00", collection: CARMA_OC-em-anthro_CMIP_CEDS_gn_shipping.x2304_y1441_t12.%y4.nc4, sample: CARMA_sample_1, regrid: CONSERVE, variable: oc_shipping}
     - {starting: "2019-12-15T12:00", collection: CARMA_OC-em-anthro_CMIP_CEDS_gn_shipping.x2304_y1441_t12.%y4.nc4, regrid: CONSERVE, sample: CARMA_sample_3, variable: oc_shipping}
-    
+
   CARMA_PSO4TOT:
     collection: /dev/null
     regrid: CONSERVE
