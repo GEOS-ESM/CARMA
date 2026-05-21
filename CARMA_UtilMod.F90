@@ -1518,7 +1518,7 @@ CONTAINS
 !                               Scattering AOT (??_scatau @ 550 nm),
 !                               Angstrom parameter (??_angstr for 470 and 870 nm wavelength pair)
    real, pointer, dimension(:,:)   :: du_exttau, su_exttau, ss_exttau, bc_exttau, ash_exttau, oc_exttau
-   real, pointer, dimension(:,:)   :: su_stratexttau, su_stratscatau
+   real, pointer, dimension(:,:)   :: su_stexttau, su_stscatau
    real, pointer, dimension(:,:)   :: du_scatau, su_scatau, ss_scatau, bc_scatau, ash_scatau, oc_scatau
    real, pointer, dimension(:,:)   :: du_angstr, su_angstr, ss_angstr, bc_angstr, ash_angstr, oc_angstr
    real, pointer, dimension(:,:)   :: totexttau, totscatau, totangstr
@@ -1665,14 +1665,14 @@ CONTAINS
    call MAPL_GetPointer(expChem, bc_exttau,   'CARMA_BCEXTTAU',   __RC__)
    call MAPL_GetPointer(expChem, oc_exttau,   'CARMA_OCEXTTAU',   __RC__)
    call MAPL_GetPointer(expChem, ash_exttau,  'CARMA_ASHEXTTAU',   __RC__)
-   call MAPL_GetPointer(expChem, su_stratexttau,   'CARMA_SUSTRATEXTTAU',   __RC__)
+   call MAPL_GetPointer(expChem, su_stexttau, 'CARMA_SUSTEXTTAU',   __RC__)
    call MAPL_GetPointer(expChem, du_scatau,   'CARMA_DUSCATAU',   __RC__)
    call MAPL_GetPointer(expChem, su_scatau,   'CARMA_SUSCATAU',   __RC__)
    call MAPL_GetPointer(expChem, ss_scatau,   'CARMA_SSSCATAU',   __RC__)
    call MAPL_GetPointer(expChem, bc_scatau,   'CARMA_BCSCATAU',   __RC__)
    call MAPL_GetPointer(expChem, oc_scatau,   'CARMA_OCSCATAU',   __RC__)
    call MAPL_GetPointer(expChem, ash_scatau,  'CARMA_ASHSCATAU',   __RC__)
-   call MAPL_GetPointer(expChem, su_stratscatau,   'CARMA_SUSTRATSCATAU',   __RC__)
+   call MAPL_GetPointer(expChem, su_stscatau, 'CARMA_SUSTSCATAU',   __RC__)
    call MAPL_GetPointer(expChem, du_angstr,   'CARMA_DUANGSTR',   __RC__)
    call MAPL_GetPointer(expChem, su_angstr,   'CARMA_SUANGSTR',   __RC__)
    call MAPL_GetPointer(expChem, ss_angstr,   'CARMA_SSANGSTR',   __RC__)
@@ -2027,8 +2027,8 @@ CONTAINS
    if( associated(SU_scatau)) SU_scatau(:,:) = 0.
    if( associated(SU_angstr)) SU_angstr(:,:) = 0.
 
-   if( associated(SU_stratexttau)) SU_stratexttau(:,:) = 0.
-   if( associated(SU_stratscatau)) SU_stratscatau(:,:) = 0.
+   if( associated(SU_stexttau)) SU_stexttau(:,:) = 0.
+   if( associated(SU_stscatau)) SU_stscatau(:,:) = 0.
 
    if( associated(SS_exttau)) SS_exttau(:,:) = 0.
    if( associated(SS_scatau)) SS_scatau(:,:) = 0.
@@ -2136,8 +2136,8 @@ CONTAINS
 !  -------
    if( associated(SU_exttau) .or. associated(SU_scatau) .or. &
        associated(SU_extcoef) .or. associated(SU_scacoef) .or. &
-       associated(SU_angstr) .or. associated(SU_stratexttau) .or. &
-       associated(SU_stratscatau) ) then
+       associated(SU_angstr) .or. associated(SU_stexttau) .or. &
+       associated(SU_stscatau) ) then
 
      if(do_angstrom)tau470(i1:i2,j1:j2) = tiny(1.0)
      if(do_angstrom)tau870(i1:i2,j1:j2) = tiny(1.0)
@@ -2179,11 +2179,11 @@ CONTAINS
               endif
 
               if( ple(i,j,k) < tropp(i,j) ) then
-                  if( associated(SU_stratexttau) ) then
-                      SU_stratexttau(i,j) = SU_stratexttau(i,j) + tau
+                  if( associated(SU_stexttau) ) then
+                      SU_stexttau(i,j) = SU_stexttau(i,j) + tau
                   endif
-                  if( associated(SU_stratscatau) ) then
-                      SU_stratscatau(i,j) = SU_stratscatau(i,j) + tau*ssa
+                  if( associated(SU_stscatau) ) then
+                      SU_stscatau(i,j) = SU_stscatau(i,j) + tau*ssa
                   endif
               endif
 

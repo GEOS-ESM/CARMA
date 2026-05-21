@@ -79,8 +79,8 @@ CARMA_DUCMASS     | kg m-2      | xy  | N |          | Dust column burden
 CARMA_DUSMASS     | kg m-3      | xy  | N |          | Dust surface mass concentration
 CARMA_DUEXTTAU    | 1           | xy  | N |          | Dust 550-nm extinction AOT
 CARMA_DUSCATAU    | 1           | xy  | N |          | Dust 550-nm scattering AOT
-CARMA_DUSTRATEXTTAU    | 1      | xy  | N |      | Stratospheric Sulfate 550-nm extinction AOT
-CARMA_DUSTRATSCATAU    | 1      | xy  | N |      | Stratospheric Sulfate 550-nm scattering AOT
+CARMA_DUSTEXTTAU  | 1           | xy  | N |          | Stratospheric Sulfate 550-nm extinction AOT
+CARMA_DUSTSCATAU  | 1           | xy  | N |          | Stratospheric Sulfate 550-nm scattering AOT
 CARMA_DUANGSTR    | 1           | xy  | N |          | Dust 470-870 nm Angstrom parameter
 CARMA_DUFLUXU     | kg m-1 s-1  | xy  | N |          | Dust column u-wind mass flux
 CARMA_DUFLUXV     | kg m-1 s-1  | xy  | N |          | Dust column v-wind mass flux
@@ -143,8 +143,8 @@ CARMA_SSCMASS     | kg m-2      | xy  | N |          | Seasalt column burden
 CARMA_SSSMASS     | kg m-3      | xy  | N |          | Seasalt surface mass concentration
 CARMA_SSEXTTAU    | 1           | xy  | N |          | Seasalt 550-nm extinction AOT
 CARMA_SSSCATAU    | 1           | xy  | N |          | Seasalt 550-nm scattering AOT
-CARMA_SSSTRATEXTTAU    | 1      | xy  | N |      | Stratospheric Sulfate 550-nm extinction AOT
-CARMA_SSSTRATSCATAU    | 1      | xy  | N |      | Stratospheric Sulfate 550-nm scattering AOT
+CARMA_SSSTEXTTAU  | 1           | xy  | N |          | Stratospheric Sulfate 550-nm extinction AOT
+CARMA_SSSTSCATAU  | 1           | xy  | N |          | Stratospheric Sulfate 550-nm scattering AOT
 CARMA_SSANGSTR    | 1           | xy  | N |          | Seasalt 470-870 nm Angstrom parameter
 CARMA_SSFLUXU     | kg m-1 s-1  | xy  | N |          | Seasalt column u-wind mass flux
 CARMA_SSFLUXV     | kg m-1 s-1  | xy  | N |          | Seasalt column v-wind mass flux
@@ -175,8 +175,8 @@ CARMA_SUCMASS     | kg m-2      | xy  | N |          | Sulfate column burden
 CARMA_SUSMASS     | kg m-3      | xy  | N |          | Sulfate surface mass concentration
 CARMA_SUEXTTAU    | 1           | xy  | N |          | Sulfate 550-nm extinction AOT
 CARMA_SUSCATAU    | 1           | xy  | N |          | Sulfate 550-nm scattering AOT
-CARMA_SUSTRATEXTTAU    | 1      | xy  | N |      | Stratospheric Sulfate 550-nm extinction AOT
-CARMA_SUSTRATSCATAU    | 1      | xy  | N |      | Stratospheric Sulfate 550-nm scattering AOT
+CARMA_SUSTEXTTAU  | 1           | xy  | N |          | Stratospheric Sulfate 550-nm extinction AOT
+CARMA_SUSTSCATAU  | 1           | xy  | N |          | Stratospheric Sulfate 550-nm scattering AOT
 CARMA_SUANGSTR    | 1           | xy  | N |          | Sulfate 470-870 nm Angstrom parameter
 CARMA_SUFLUXU     | kg m-1 s-1  | xy  | N |          | Sulfate column u-wind mass flux
 CARMA_SUFLUXV     | kg m-1 s-1  | xy  | N |          | Sulfate column v-wind mass flux
@@ -199,8 +199,8 @@ CARMA_MXSUCMASS   | kg m-2      | xy  | N |          | Mixed Sulfate column burd
 CARMA_MXSUSMASS   | kg m-3      | xy  | N |          | Mixed Sulfate surface mass concentration
 CARMA_MXSUEXTTAU  | 1           | xy  | N |          | Mixed Sulfate 550-nm extinction AOT
 CARMA_MXSUSCATAU  | 1           | xy  | N |          | Mixed Sulfate 550-nm scattering AOT
-CARMA_MXSTRATEXTTAU    | 1      | xy  | N |      | Stratospheric Sulfate 550-nm extinction AOT
-CARMA_MXSTRATSCATAU    | 1      | xy  | N |      | Stratospheric Sulfate 550-nm scattering AOT
+CARMA_MXSTEXTTAU  | 1           | xy  | N |          | Stratospheric Sulfate 550-nm extinction AOT
+CARMA_MXSTSCATAU  | 1           | xy  | N |          | Stratospheric Sulfate 550-nm scattering AOT
 CARMA_MXSUANGSTR  | 1           | xy  | N |          | Mixed Sulfate 470-870 nm Angstrom parameter
 CARMA_MXSUFLUXU   | kg m-1 s-1  | xy  | N |          | Mixed Sulfate column u-wind mass flux
 CARMA_MXSUFLUXV   | kg m-1 s-1  | xy  | N |          | Mixed Sulfate column v-wind mass flux
@@ -215,8 +215,8 @@ CARMA_OCCMASS     | kg m-2      | xy  | N |          | organiccarbon column burd
 CARMA_OCSMASS     | kg m-3      | xy  | N |          | organiccarbon surface mass concentration
 CARMA_OCEXTTAU    | 1           | xy  | N |          | organiccarbon 550-nm extinction AOT
 CARMA_OCSCATAU    | 1           | xy  | N |          | organiccarbon 550-nm scattering AOT
-CARMA_OCSTRATEXTTAU    | 1      | xy  | N |      | Stratospheric Sulfate 550-nm extinction AOT
-CARMA_OCSTRATSCATAU    | 1      | xy  | N |      | Stratospheric Sulfate 550-nm scattering AOT
+CARMA_OCSTEXTTAU  | 1           | xy  | N |          | Stratospheric Sulfate 550-nm extinction AOT
+CARMA_OCSTSCATAU  | 1           | xy  | N |          | Stratospheric Sulfate 550-nm scattering AOT
 CARMA_OCANGSTR    | 1           | xy  | N |          | organiccarbon 470-870 nm Angstrom parameter
 CARMA_OCFLUXU     | kg m-1 s-1  | xy  | N |          | organiccarbon column u-wind mass flux
 CARMA_OCFLUXV     | kg m-1 s-1  | xy  | N |          | organiccarbon column v-wind mass flux
@@ -272,8 +272,8 @@ CARMA_MXBCMASS    | kg kg-1     | xyz | C |          | Mixed Black Carbon Mass M
 CARMA_MXBCCONC    | kg m-3      | xyz | C |          | Mixed Black Carbon Mass Concentration
 CARMA_TOTEXTTAU   | 1           | xy  | N |          | Total 550-nm extinction AOT
 CARMA_TOTSCATAU   | 1           | xy  | N |          | Total 550-nm scattering AOT
-CARMA_TOTSTRATEXTTAU    | 1      | xy  | N |      | Stratospheric Sulfate 550-nm extinction AOT
-CARMA_TOTSTRATSCATAU    | 1      | xy  | N |      | Stratospheric Sulfate 550-nm scattering AOT
+CARMA_TOTSTEXTTAU | 1           | xy  | N |          | Stratospheric Sulfate 550-nm extinction AOT
+CARMA_TOTSTSCATAU | 1           | xy  | N |          | Stratospheric Sulfate 550-nm scattering AOT
 CARMA_TOTANGSTR   | 1           | xy  | N |          | Total 470-870 nm Angstrom parameter
 CARMA_DUEXTCOEF   | m-1         | xyz | C |          | Dust 550 nm extinction coefficient
 CARMA_DUSCACOEF   | m-1         | xyz | C |          | Dust 550 nm scattering coefficient
