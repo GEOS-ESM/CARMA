@@ -197,9 +197,9 @@ CONTAINS
                                       ustar, pblh, z0h, shflux, precc, precl, &
                                       frocean, frseaice, frland, tskin, area
    REAL, POINTER, DIMENSION(:,:)   :: emissions, memissions, nemissions, dqa
-   REAL, POINTER, DIMENSION(:,:)   :: biofuel_src, ebcant1_src, ebcant2_src, &
-                                      bc_ship_src, biomass_src, biogenic_src
-   real, pointer, dimension(:,:)   :: du_emis, ss_emis, bc_emis, ash_emis, sm_emis
+   REAL, POINTER, DIMENSION(:,:)   :: biofuel_src, ant1_src, ant2_src, &
+                                      ship_src, biomass_src, biogenic_src
+   real, pointer, dimension(:,:)   :: du_emis, ss_emis, bc_emis, ash_emis, oc_emis
 
    type(CARMA_Registry), pointer :: reg => null()
    type(carma_type), pointer     :: r => null()
@@ -277,7 +277,7 @@ CONTAINS
    call MAPL_GetPointer(expChem, du_emis,   'CARMA_DUEM',   __RC__)
    call MAPL_GetPointer(expChem, ss_emis,   'CARMA_SSEM',   __RC__)
    call MAPL_GetPointer(expChem, bc_emis,   'CARMA_BCEM',   __RC__)
-   call MAPL_GetPointer(expChem, sm_emis,   'CARMA_SMEM',   __RC__)
+   call MAPL_GetPointer(expChem, oc_emis,   'CARMA_OCEM',   __RC__)
    call MAPL_GetPointer(expChem, ash_emis,   'CARMA_ASHEM',   __RC__)
 
 !  Loop over CARMA elements and assign emissions
@@ -425,55 +425,84 @@ CONTAINS
 
 !   Black Carbon
 !   ------------------------------------------------------------------------
-    if(groupname == 'blackcarbon' .OR. groupname == 'BLACKCARBON') then
+    if(  groupname == 'BLACKCARBON' .or. &
+       ( reg%igrp_black_carbon < 1 .AND. groupname == 'MIXEDP' .AND. elemname  == 'BLACKCARBON'      ) ) then
 
-     if(gcCARMA%nymd_bc .ne. nymd) then
+!     Do the emission calculation
+      if( associated(BC_emis)) BC_emis(:,:) = 0.
 
-      gcCARMA%nymd_bc = nymd
+      call MAPL_GetPointer( impChem, biomass_src,  'CARMA_BC_BIOMASS', __RC__)
+      call MAPL_GetPointer( impChem, biofuel_src,  'CARMA_BC_BIOFUEL', __RC__)
+      call MAPL_GetPointer( impChem, ant1_src,     'CARMA_BC_ANTEBC1', __RC__)
+      call MAPL_GetPointer( impChem, ant2_src,     'CARMA_BC_ANTEBC2', __RC__)
+      call MAPL_GetPointer( impChem, ship_src,     'CARMA_BC_SHIP', __RC__)
+!      call MAPL_GetPointer( impChem, biogenic_src, 'CARMA_BC_TERPENE', __RC__)
 
-     endif
+      if(associated(BC_emis)) BC_emis = ( biomass_src + biofuel_src + &
+                                          ship_src + ant1_src + &
+                                          ant2_src)
+!      + &
+!                                          biogenic_src * reg%fraction_terpene_to_organic_carbon) &
+!                                       *  reg%organic_matter_to_organic_carbon_ratio
+
+      do ibin = 1, reg%NBIN
+       n = n1 + (ielem-1)*reg%NBIN + ibin - 1
+       dqa =     reg%distribution(ielem, ibin) * dtime *grav_mks / (ple(:,:,km)-ple(:,:,km-1)) &
+             * (   biomass_src + biofuel_src + ship_src &
+                 + ant1_src + ant2_src) * reg%organic_matter_to_organic_carbon_ratio
+!      biogenic source
+!       dqa = dqa + reg%distribution(ielem, ibin) * dtime *grav_mks / (ple(:,:,km)-ple(:,:,km-1)) * biogenic_src 
+       qa(n)%data3d(:,:,km) = qa(n)%data3d(:,:,km) + dqa
+!      If primary emissions are going into a mixed group element (test by
+!      checking no pure oc group but oc element is not "pc") then need to 
+!      also add mass to "pc" element
+       if( reg%igrp_organic_carbon < 1 .AND. ielem .NE. ienconc) then
+        n = n1 + (ienconc-1)*reg%NBIN + ibin - 1
+        qa(n)%data3d(:,:,km) = qa(n)%data3d(:,:,km) + dqa
+       endif
+      enddo
 
     endif  ! Black Carbon
 !   ------------------------------------------------------------------------
 
-!   Smoke
+!   Organic carbon 
 !   ------------------------------------------------------------------------
 !   For now just dump emission sources in the lower model layer
 !   For now also prescribing an initial PSD by bins (dMBC) which is stupid
 !   and also not correct for mixed groups.
-    if(  groupname == 'SMOKE' .or. &
-       ( reg%igrp_smoke < 1 .AND. groupname == 'MIXEDP' .AND. elemname  == 'SMOKE'      ) ) then
+    if(  groupname == 'ORGANICCARBON' .or. &
+       ( reg%igrp_organic_carbon < 1 .AND. groupname == 'MIXEDP' .AND. elemname  == 'ORGANICCARBON'      ) ) then
 
 !     Do the emission calculation
-      if( associated(SM_emis)) SM_emis(:,:) = 0.
+      if( associated(OC_emis)) OC_emis(:,:) = 0.
 
-      call MAPL_GetPointer( impChem, biomass_src,  'CARMA_SM_BIOMASS', __RC__)
-      call MAPL_GetPointer( impChem, biofuel_src,  'CARMA_SM_BIOFUEL', __RC__)
-      call MAPL_GetPointer( impChem, ebcant1_src,  'CARMA_SM_ANTEOC1', __RC__)
-      call MAPL_GetPointer( impChem, ebcant2_src,  'CARMA_SM_ANTEOC2', __RC__)
-      call MAPL_GetPointer( impChem, bc_ship_src,  'CARMA_SM_SHIP', __RC__)
+      call MAPL_GetPointer( impChem, biomass_src,  'CARMA_OC_BIOMASS', __RC__)
+      call MAPL_GetPointer( impChem, biofuel_src,  'CARMA_OC_BIOFUEL', __RC__)
+      call MAPL_GetPointer( impChem, ant1_src,     'CARMA_OC_ANTEOC1', __RC__)
+      call MAPL_GetPointer( impChem, ant2_src,     'CARMA_OC_ANTEOC2', __RC__)
+      call MAPL_GetPointer( impChem, ship_src,     'CARMA_OC_SHIP', __RC__)
       call MAPL_GetPointer( impChem, biogenic_src, 'CARMA_OC_TERPENE', __RC__)
       call MAPL_GetPointer( impChem, psoa_anthro,  'CARMA_PSOA_ANTHRO_VOC', __RC__)
       call MAPL_GetPointer( impChem, psoa_biomass, 'CARMA_PSOA_BIOB_VOC', __RC__)
 
-      if(associated(SM_emis)) SM_emis = ( biomass_src + biofuel_src + &
-                                          bc_ship_src + ebcant1_src + &
-                                          ebcant2_src + &
+      if(associated(OC_emis)) OC_emis = ( biomass_src + biofuel_src + &
+                                          ship_src + ant1_src + &
+                                          ant2_src + &
                                           biogenic_src * reg%fraction_terpene_to_organic_carbon) &
                                        *  reg%organic_matter_to_organic_carbon_ratio
 
       do ibin = 1, reg%NBIN
        n = n1 + (ielem-1)*reg%NBIN + ibin - 1
-       dqa =     dMbc(ibin) * dtime *grav_mks / (ple(:,:,km)-ple(:,:,km-1)) &
-             * (   biomass_src + biofuel_src + bc_ship_src &
-                 + ebcant1_src + ebcant2_src) * reg%organic_matter_to_organic_carbon_ratio
+       dqa =     reg%distribution(ielem, ibin) * dtime *grav_mks / (ple(:,:,km)-ple(:,:,km-1)) &
+             * (   biomass_src + biofuel_src + ship_src &
+                 + ant1_src + ant2_src) * reg%organic_matter_to_organic_carbon_ratio
 !      biogenic source
-       dqa = dqa + dMbc(ibin) * dtime *grav_mks / (ple(:,:,km)-ple(:,:,km-1)) * biogenic_src 
+!       dqa = dqa + reg%distribution(ielem, ibin) * dtime *grav_mks / (ple(:,:,km)-ple(:,:,km-1)) * biogenic_src 
        qa(n)%data3d(:,:,km) = qa(n)%data3d(:,:,km) + dqa
 !      If primary emissions are going into a mixed group element (test by
-!      checking no pure smoke group but SMOKE element is not "pc") then need to 
+!      checking no pure oc group but oc element is not "pc") then need to 
 !      also add mass to "pc" element
-       if( reg%igrp_smoke < 1 .AND. ielem .NE. ienconc) then
+       if( reg%igrp_organic_carbon < 1 .AND. ielem .NE. ienconc) then
         n = n1 + (ienconc-1)*reg%NBIN + ibin - 1
         qa(n)%data3d(:,:,km) = qa(n)%data3d(:,:,km) + dqa
        endif
@@ -483,12 +512,12 @@ CONTAINS
       do ibin = 1, reg%NBIN
        n = n1 + (ielem-1)*reg%NBIN + ibin - 1
        do k = 1, km
-        dqa = dMbc(ibin) * dtime * (psoa_anthro(:,:,k)+psoa_biomass(:,:,k))/rhoa(:,:,k)
+        dqa = reg%distribution(ielem, ibin) * dtime * (psoa_anthro(:,:,k)+psoa_biomass(:,:,k))/rhoa(:,:,k)
         qa(n)%data3d(:,:,k) = qa(n)%data3d(:,:,k) + dqa
 !       If primary emissions are going into a mixed group element (test by
-!       checking no pure smoke group but SMOKE element is not "pc") then need to 
+!       checking no pure oc group but oc element is not "pc") then need to 
 !       also add mass to "pc" element
-        if( reg%igrp_smoke < 1 .AND. ielem .NE. ienconc) then
+        if( reg%igrp_organic_carbon < 1 .AND. ielem .NE. ienconc) then
          n = n1 + (ienconc-1)*reg%NBIN + ibin - 1
          qa(n)%data3d(:,:,k) = qa(n)%data3d(:,:,k) + dqa
         endif
@@ -496,7 +525,7 @@ CONTAINS
       end do
 
 
-    endif  ! Smoke
+    endif  ! organic carbon
 !   ------------------------------------------------------------------------
 
 !   Volcanic Ash
@@ -661,7 +690,7 @@ CONTAINS
         dqa = 0.
         n = n1 + (ielem-1)*reg%NBIN + ibin - 1
         qa(n)%data3d(i,j,:) =  qa(n)%data3d(i,j,:) &
-                             + dMpin(ibin)*dtime*grav_mks/delp*point_column_emissions/area(i,j)
+                             + reg%distribution(ielem, ibin)*dtime*grav_mks/delp*point_column_emissions/area(i,j)
        end do
       enddo
       deallocate(iPoint, jPoint, stat=ios)
@@ -757,8 +786,8 @@ CONTAINS
    REAL, POINTER, DIMENSION(:,:)   :: gwettop, fraclake, oro, u10m, v10m, &
                                       ustar, pblh, z0h, shflux, precc, precl
    REAL, POINTER, DIMENSION(:,:)   :: drydepositionfrequency, dqa
-   real, pointer, dimension(:,:)   :: du_dep, su_dep, ss_dep, bc_dep, ash_dep, sm_dep, &
-                                      mxdu_dep, mxsu_dep, mxss_dep, mxbc_dep, mxash_dep, mxsm_dep
+   real, pointer, dimension(:,:)   :: du_dep, su_dep, ss_dep, bc_dep, ash_dep, oc_dep, &
+                                      mxdu_dep, mxsu_dep, mxss_dep, mxbc_dep, mxash_dep, mxoc_dep
 
    type(CARMA_Registry), pointer :: reg => null()
    type(carma_type), pointer     :: r => null()
@@ -819,13 +848,13 @@ CONTAINS
    call MAPL_GetPointer(expChem, su_dep,    'CARMA_SUDP',     __RC__)
    call MAPL_GetPointer(expChem, ss_dep,    'CARMA_SSDP',     __RC__)
    call MAPL_GetPointer(expChem, bc_dep,    'CARMA_BCDP',     __RC__)
-   call MAPL_GetPointer(expChem, sm_dep,    'CARMA_SMDP',     __RC__)
+   call MAPL_GetPointer(expChem, oc_dep,    'CARMA_OCDP',     __RC__)
    call MAPL_GetPointer(expChem, ash_dep,   'CARMA_ASHDP',    __RC__)
    call MAPL_GetPointer(expChem, mxdu_dep,  'CARMA_MXDUDP',   __RC__)
    call MAPL_GetPointer(expChem, mxsu_dep,  'CARMA_MXSUDP',   __RC__)
    call MAPL_GetPointer(expChem, mxss_dep,  'CARMA_MXSSDP',   __RC__)
    call MAPL_GetPointer(expChem, mxbc_dep,  'CARMA_MXBCDP',   __RC__)
-   call MAPL_GetPointer(expChem, mxsm_dep,  'CARMA_MXSMDP',   __RC__)
+   call MAPL_GetPointer(expChem, mxoc_dep,  'CARMA_MXOCDP',   __RC__)
    call MAPL_GetPointer(expChem, mxash_dep, 'CARMA_MXASHDP',  __RC__)
 
 !  Do dry (turbulent) deposition
@@ -839,13 +868,13 @@ CONTAINS
    if( associated(SU_dep))    SU_dep(:,:)    = 0.
    if( associated(SS_dep))    SS_dep(:,:)    = 0.
    if( associated(BC_dep))    BC_dep(:,:)    = 0.
-   if( associated(SM_dep))    SM_dep(:,:)    = 0.
+   if( associated(OC_dep))    OC_dep(:,:)    = 0.
    if( associated(ASH_dep))   ASH_dep(:,:)   = 0.
    if( associated(MXDU_dep))  MXDU_dep(:,:)  = 0.
    if( associated(MXSU_dep))  MXSU_dep(:,:)  = 0.
    if( associated(MXSS_dep))  MXSS_dep(:,:)  = 0.
    if( associated(MXBC_dep))  MXBC_dep(:,:)  = 0.
-   if( associated(MXSM_dep))  MXSM_dep(:,:)  = 0.
+   if( associated(MXOC_dep))  MXOC_dep(:,:)  = 0.
    if( associated(MXASH_dep)) MXASH_dep(:,:) = 0.
    do ielem = 1, reg%NELEM
 
@@ -886,7 +915,7 @@ CONTAINS
 
      if(associated(DU_dep)  .and. igroup .eq. reg%igrp_dust)         DU_dep(:,:) = DU_dep(:,:) + dqa
      if(associated(SS_dep)  .and. igroup .eq. reg%igrp_seasalt)      SS_dep(:,:) = SS_dep(:,:) + dqa
-     if(associated(SM_dep)  .and. igroup .eq. reg%igrp_smoke)        SM_dep(:,:) = SM_dep(:,:) + dqa
+     if(associated(OC_dep)  .and. igroup .eq. reg%igrp_organic_carbon)        OC_dep(:,:) = OC_dep(:,:) + dqa
      if(associated(SU_dep)  .and. igroup .eq. reg%igrp_sulfate)      SU_dep(:,:) = SU_dep(:,:) + dqa
      if(associated(BC_dep)  .and. igroup .eq. reg%igrp_black_carbon) BC_dep(:,:) = BC_dep(:,:) + dqa
      if(associated(ASH_dep) .and. igroup .eq. reg%igrp_ash)          ASH_dep(:,:) = ASH_dep(:,:) + dqa
@@ -894,13 +923,13 @@ CONTAINS
      if(igroup .eq. reg%igrp_mixed) then
       if(associated(MXDU_dep) .and. ielem .eq. reg%ielm_mxdust)      MXDU_dep(:,:) = MXDU_dep(:,:) + dqa
       if(associated(MXSS_dep) .and. ielem .eq. reg%ielm_mxseasalt)   MXSS_dep(:,:) = MXSS_dep(:,:) + dqa
-      if(associated(MXSM_dep) .and. ielem .eq. reg%ielm_mxsmoke)     MXSM_dep(:,:) = MXSM_dep(:,:) + dqa
+      if(associated(MXOC_dep) .and. ielem .eq. reg%ielm_mxoc)     MXOC_dep(:,:) = MXOC_dep(:,:) + dqa
       if(associated(MXSU_dep) .and. ielem .eq. reg%ielm_mxsulfate)   MXSU_dep(:,:) = MXSU_dep(:,:) + dqa
       if(associated(MXBC_dep)  .and. ielem .eq. reg%ielm_mxbc)       MXBC_dep(:,:) = MXBC_dep(:,:) + dqa
       if(associated(MXASH_dep) .and. ielem .eq. reg%ielm_mxash)      MXASH_dep(:,:) = MXASH_dep(:,:) + dqa
 !     subtract cores
       if(associated(MXSU_dep) .and. ielem .eq. reg%ielm_mxdust)      MXSU_dep(:,:) = MXSU_dep(:,:) - dqa
-      if(associated(MXSU_dep) .and. ielem .eq. reg%ielm_mxsmoke)     MXSU_dep(:,:) = MXSU_dep(:,:) - dqa
+      if(associated(MXSU_dep) .and. ielem .eq. reg%ielm_mxoc)     MXSU_dep(:,:) = MXSU_dep(:,:) - dqa
       if(associated(MXSU_dep) .and. ielem .eq. reg%ielm_mxseasalt)   MXSU_dep(:,:) = MXSU_dep(:,:) - dqa
       if(associated(MXSU_dep) .and. ielem .eq. reg%ielm_mxbc)        MXSU_dep(:,:) = MXSU_dep(:,:) - dqa
       if(associated(MXSU_dep) .and. ielem .eq. reg%ielm_mxash)       MXSU_dep(:,:) = MXSU_dep(:,:) - dqa
@@ -977,8 +1006,8 @@ CONTAINS
    REAL, POINTER, DIMENSION(:,:)   :: gwettop, fraclake, oro, u10m, v10m, &
                                       ustar, pblh, z0h, shflux, precc, precl
    type(Chem_Array), pointer       :: wetremovalflux
-   real, pointer, dimension(:,:)   :: du_wet, su_wet, ss_wet, bc_wet, ash_wet, sm_wet, &
-                                      mxdu_wet, mxsu_wet, mxss_wet, mxbc_wet, mxash_wet, mxsm_wet
+   real, pointer, dimension(:,:)   :: du_wet, su_wet, ss_wet, bc_wet, ash_wet, oc_wet, &
+                                      mxdu_wet, mxsu_wet, mxss_wet, mxbc_wet, mxash_wet, mxoc_wet
 
    type(CARMA_Registry), pointer   :: reg => null()
    type(carma_type), pointer       :: r => null()
@@ -1048,13 +1077,13 @@ CONTAINS
    call MAPL_GetPointer(expChem, su_wet,    'CARMA_SUWT',     __RC__)
    call MAPL_GetPointer(expChem, ss_wet,    'CARMA_SSWT',     __RC__)
    call MAPL_GetPointer(expChem, bc_wet,    'CARMA_BCWT',     __RC__)
-   call MAPL_GetPointer(expChem, sm_wet,    'CARMA_SMWT',     __RC__)
+   call MAPL_GetPointer(expChem, oc_wet,    'CARMA_OCWT',     __RC__)
    call MAPL_GetPointer(expChem, ash_wet,   'CARMA_ASHWT',    __RC__)
    call MAPL_GetPointer(expChem, mxdu_wet,  'CARMA_MXDUWT',   __RC__)
    call MAPL_GetPointer(expChem, mxsu_wet,  'CARMA_MXSUWT',   __RC__)
    call MAPL_GetPointer(expChem, mxss_wet,  'CARMA_MXSSWT',   __RC__)
    call MAPL_GetPointer(expChem, mxbc_wet,  'CARMA_MXBCWT',   __RC__)
-   call MAPL_GetPointer(expChem, mxsm_wet,  'CARMA_MXSMWT',   __RC__)
+   call MAPL_GetPointer(expChem, mxoc_wet,  'CARMA_MXOCWT',   __RC__)
    call MAPL_GetPointer(expChem, mxash_wet, 'CARMA_MXASHWT',  __RC__)
 
 !  Routine calls the GOCART wet removal routine (large scale
@@ -1066,13 +1095,13 @@ CONTAINS
    if( associated(SU_wet))    SU_wet(:,:) = 0.
    if( associated(SS_wet))    SS_wet(:,:) = 0.
    if( associated(BC_wet))    BC_wet(:,:) = 0.
-   if( associated(SM_wet))    SM_wet(:,:) = 0.
+   if( associated(OC_wet))    OC_wet(:,:) = 0.
    if( associated(ASH_wet))   ASH_wet(:,:) = 0.
    if( associated(MXDU_wet))  MXDU_wet(:,:) = 0.
    if( associated(MXSU_wet))  MXSU_wet(:,:) = 0.
    if( associated(MXSS_wet))  MXSS_wet(:,:) = 0.
    if( associated(MXBC_wet))  MXBC_wet(:,:) = 0.
-   if( associated(MXSM_wet))  MXSM_wet(:,:) = 0.
+   if( associated(MXOC_wet))  MXOC_wet(:,:) = 0.
    if( associated(MXASH_wet)) MXASH_wet(:,:) = 0.
 
 
@@ -1085,7 +1114,7 @@ CONTAINS
      if(groupname == 'ash'  .OR. groupname == 'ASH' .or. &
         groupname == 'blackcarbon'  .OR. groupname == 'BLACKCARBON' .or. &
         groupname == 'dust'  .OR. groupname == 'DUST' .or. &
-        groupname =='smoke' .or. groupname == 'SMOKE' ) then
+        groupname =='organiccarbon' .or. groupname == 'ORGANICCARBON' ) then
       qa(n)%fwet  = 0.3
      else
       qa(n)%fwet  = 1.
@@ -1111,7 +1140,7 @@ CONTAINS
                            precc, precl, wetremovalflux, rc )
     if(associated(DU_wet)  .and. igroup .eq. reg%igrp_dust)         DU_wet(:,:)  = wetremovalflux%data2d
     if(associated(SS_wet)  .and. igroup .eq. reg%igrp_seasalt)      SS_wet(:,:)  = wetremovalflux%data2d
-    if(associated(SM_wet)  .and. igroup .eq. reg%igrp_smoke)        SM_wet(:,:)  = wetremovalflux%data2d
+    if(associated(OC_wet)  .and. igroup .eq. reg%igrp_organic_carbon)        OC_wet(:,:)  = wetremovalflux%data2d
     if(associated(SU_wet)  .and. igroup .eq. reg%igrp_sulfate)      SU_wet(:,:)  = wetremovalflux%data2d
     if(associated(BC_wet)  .and. igroup .eq. reg%igrp_black_carbon) BC_wet(:,:)  = wetremovalflux%data2d
     if(associated(ASH_wet) .and. igroup .eq. reg%igrp_ash)          ASH_wet(:,:)  = wetremovalflux%data2d
@@ -1119,13 +1148,13 @@ CONTAINS
     if(igroup .eq. reg%igrp_mixed) then
      if(associated(MXDU_wet) .and. ielem .eq. reg%ielm_mxdust)      MXDU_wet(:,:) = wetremovalflux%data2d
      if(associated(MXSS_wet) .and. ielem .eq. reg%ielm_mxseasalt)   MXSS_wet(:,:) = wetremovalflux%data2d
-     if(associated(MXSM_wet) .and. ielem .eq. reg%ielm_mxsmoke)     MXSM_wet(:,:) = wetremovalflux%data2d
+     if(associated(MXOC_wet) .and. ielem .eq. reg%ielm_mxoc)     MXOC_wet(:,:) = wetremovalflux%data2d
      if(associated(MXSU_wet) .and. ielem .eq. reg%ielm_mxsulfate)   MXSU_wet(:,:) = wetremovalflux%data2d
      if(associated(MXBC_wet)  .and. ielem .eq. reg%ielm_mxbc)       MXBC_wet(:,:) = wetremovalflux%data2d
      if(associated(MXASH_wet) .and. ielem .eq. reg%ielm_mxash)      MXASH_wet(:,:) = wetremovalflux%data2d
 !    subtract cores
      if(associated(MXSU_wet) .and. ielem .eq. reg%ielm_mxdust)      MXSU_wet(:,:) = MXSU_wet(:,:) - wetremovalflux%data2d
-     if(associated(MXSU_wet) .and. ielem .eq. reg%ielm_mxsmoke)     MXSU_wet(:,:) = MXSU_wet(:,:) - wetremovalflux%data2d
+     if(associated(MXSU_wet) .and. ielem .eq. reg%ielm_mxoc)     MXSU_wet(:,:) = MXSU_wet(:,:) - wetremovalflux%data2d
      if(associated(MXSU_wet) .and. ielem .eq. reg%ielm_mxseasalt)   MXSU_wet(:,:) = MXSU_wet(:,:) - wetremovalflux%data2d
      if(associated(MXSU_wet) .and. ielem .eq. reg%ielm_mxbc)        MXSU_wet(:,:) = MXSU_wet(:,:) - wetremovalflux%data2d
      if(associated(MXSU_wet) .and. ielem .eq. reg%ielm_mxash)       MXSU_wet(:,:) = MXSU_wet(:,:) - wetremovalflux%data2d
@@ -1201,8 +1230,8 @@ CONTAINS
 
    REAL, POINTER, DIMENSION(:,:,:) :: cmfmc, qccu, dtrain, ple, zle, rhoa, tmpu
    REAL, POINTER, DIMENSION(:,:)   :: frocean, frseaice, frlake, area
-   real, pointer, dimension(:,:)   :: du_scav, su_scav, ss_scav, bc_scav, ash_scav, sm_scav, &
-                                      mxdu_scav, mxsu_scav, mxss_scav, mxbc_scav, mxash_scav, mxsm_scav
+   real, pointer, dimension(:,:)   :: du_scav, su_scav, ss_scav, bc_scav, ash_scav, oc_scav, &
+                                      mxdu_scav, mxsu_scav, mxss_scav, mxbc_scav, mxash_scav, mxoc_scav
 !  Locals
    real*8, allocatable, dimension(:,:,:) ::  cmfmc_, qccu_, dtrain_, &
                                              airmass_, airmol_, vud_, &
@@ -1264,13 +1293,13 @@ CONTAINS
    call MAPL_GetPointer(expChem, su_scav,     'CARMA_SUSV',     __RC__)
    call MAPL_GetPointer(expChem, ss_scav,     'CARMA_SSSV',     __RC__)
    call MAPL_GetPointer(expChem, bc_scav,     'CARMA_BCSV',     __RC__)
-   call MAPL_GetPointer(expChem, sm_scav,     'CARMA_SMSV',     __RC__)
+   call MAPL_GetPointer(expChem, oc_scav,     'CARMA_OCSV',     __RC__)
    call MAPL_GetPointer(expChem, ash_scav,    'CARMA_ASHSV',    __RC__)
    call MAPL_GetPointer(expChem, mxdu_scav,   'CARMA_MXDUSV',   __RC__)
    call MAPL_GetPointer(expChem, mxsu_scav,   'CARMA_MXSUSV',   __RC__)
    call MAPL_GetPointer(expChem, mxss_scav,   'CARMA_MXSSSV',   __RC__)
    call MAPL_GetPointer(expChem, mxbc_scav,   'CARMA_MXBCSV',   __RC__)
-   call MAPL_GetPointer(expChem, mxsm_scav,   'CARMA_MXSMSV',   __RC__)
+   call MAPL_GetPointer(expChem, mxoc_scav,   'CARMA_MXOCSV',   __RC__)
    call MAPL_GetPointer(expChem, mxash_scav,  'CARMA_MXASHSV',  __RC__)
 
 #ifdef DEBUG
@@ -1325,13 +1354,13 @@ CONTAINS
    if( associated(SU_scav))    SU_scav(:,:)    = 0.
    if( associated(SS_scav))    SS_scav(:,:)    = 0.
    if( associated(BC_scav))    BC_scav(:,:)    = 0.
-   if( associated(SM_scav))    SM_scav(:,:)    = 0.
+   if( associated(OC_scav))    OC_scav(:,:)    = 0.
    if( associated(ASH_scav))   ASH_scav(:,:)   = 0.
    if( associated(MXDU_scav))  MXDU_scav(:,:)  = 0.
    if( associated(MXSU_scav))  MXSU_scav(:,:)  = 0.
    if( associated(MXSS_scav))  MXSS_scav(:,:)  = 0.
    if( associated(MXBC_scav))  MXBC_scav(:,:)  = 0.
-   if( associated(MXSM_scav))  MXSM_scav(:,:)  = 0.
+   if( associated(MXOC_scav))  MXOC_scav(:,:)  = 0.
    if( associated(MXASH_scav)) MXASH_scav(:,:) = 0.
 
 !  For now we do the calculation based on elements
@@ -1376,7 +1405,7 @@ CONTAINS
 
      if(associated(DU_scav)  .and. igroup .eq. reg%igrp_dust)         DU_scav(:,:) = DU_scav(:,:) - bcnv_(:,:,ibin)/area_/icdt
      if(associated(SS_scav)  .and. igroup .eq. reg%igrp_seasalt)      SS_scav(:,:) = SS_scav(:,:) - bcnv_(:,:,ibin)/area_/icdt
-     if(associated(SM_scav)  .and. igroup .eq. reg%igrp_smoke)        SM_scav(:,:) = SM_scav(:,:) - bcnv_(:,:,ibin)/area_/icdt
+     if(associated(OC_scav)  .and. igroup .eq. reg%igrp_organic_carbon)        OC_scav(:,:) = OC_scav(:,:) - bcnv_(:,:,ibin)/area_/icdt
      if(associated(SU_scav)  .and. igroup .eq. reg%igrp_sulfate)      SU_scav(:,:) = SU_scav(:,:) - bcnv_(:,:,ibin)/area_/icdt
      if(associated(BC_scav)  .and. igroup .eq. reg%igrp_black_carbon) BC_scav(:,:) = BC_scav(:,:) - bcnv_(:,:,ibin)/area_/icdt
      if(associated(ASH_scav) .and. igroup .eq. reg%igrp_ash)          ASH_scav(:,:) = ASH_scav(:,:) - bcnv_(:,:,ibin)/area_/icdt
@@ -1384,13 +1413,13 @@ CONTAINS
      if(igroup .eq. reg%igrp_mixed) then
       if(associated(MXDU_scav) .and. ielem .eq. reg%ielm_mxdust)      MXDU_scav(:,:) = MXDU_scav(:,:) - bcnv_(:,:,ibin)/area_/icdt
       if(associated(MXSS_scav) .and. ielem .eq. reg%ielm_mxseasalt)   MXSS_scav(:,:) = MXSS_scav(:,:) - bcnv_(:,:,ibin)/area_/icdt
-      if(associated(MXSM_scav) .and. ielem .eq. reg%ielm_mxsmoke)     MXSM_scav(:,:) = MXSM_scav(:,:) - bcnv_(:,:,ibin)/area_/icdt
+      if(associated(MXOC_scav) .and. ielem .eq. reg%ielm_mxoc)     MXOC_scav(:,:) = MXOC_scav(:,:) - bcnv_(:,:,ibin)/area_/icdt
       if(associated(MXSU_scav) .and. ielem .eq. reg%ielm_mxsulfate)   MXSU_scav(:,:) = MXSU_scav(:,:) - bcnv_(:,:,ibin)/area_/icdt
       if(associated(MXBC_scav)  .and. ielem .eq. reg%ielm_mxbc)       MXBC_scav(:,:) = MXBC_scav(:,:) - bcnv_(:,:,ibin)/area_/icdt
       if(associated(MXASH_scav) .and. ielem .eq. reg%ielm_mxash)      MXASH_scav(:,:) = MXASH_scav(:,:) - bcnv_(:,:,ibin)/area_/icdt
 !     subtract cores
       if(associated(MXSU_scav) .and. ielem .eq. reg%ielm_mxdust)      MXSU_scav(:,:) = MXSU_scav(:,:) + bcnv_(:,:,ibin)/area_/icdt
-      if(associated(MXSU_scav) .and. ielem .eq. reg%ielm_mxsmoke)     MXSU_scav(:,:) = MXSU_scav(:,:) + bcnv_(:,:,ibin)/area_/icdt
+      if(associated(MXSU_scav) .and. ielem .eq. reg%ielm_mxoc)     MXSU_scav(:,:) = MXSU_scav(:,:) + bcnv_(:,:,ibin)/area_/icdt
       if(associated(MXSU_scav) .and. ielem .eq. reg%ielm_mxseasalt)   MXSU_scav(:,:) = MXSU_scav(:,:) + bcnv_(:,:,ibin)/area_/icdt
       if(associated(MXSU_scav) .and. ielem .eq. reg%ielm_mxbc)        MXSU_scav(:,:) = MXSU_scav(:,:) + bcnv_(:,:,ibin)/area_/icdt
       if(associated(MXSU_scav) .and. ielem .eq. reg%ielm_mxash)       MXSU_scav(:,:) = MXSU_scav(:,:) + bcnv_(:,:,ibin)/area_/icdt
@@ -1471,32 +1500,32 @@ CONTAINS
    REAL, POINTER, DIMENSION(:,:)   :: gwettop, fraclake, oro, u10m, v10m, &
                                       ustar, pblh, z0h, shflux, precc, precl, &
                                       tropp
-   real, pointer, dimension(:,:,:) :: du_mass, su_mass, ss_mass, bc_mass, ash_mass, sm_mass, &
-                                      mxdu_mass, mxsu_mass, mxss_mass, mxbc_mass, mxash_mass, mxsm_mass
-   real, pointer, dimension(:,:,:) :: du_conc, su_conc, ss_conc, bc_conc, ash_conc, sm_conc, &
-                                      mxdu_conc, mxsu_conc, mxss_conc, mxbc_conc, mxash_conc, mxsm_conc
-   real, pointer, dimension(:,:)   :: du_fluxu, su_fluxu, ss_fluxu, bc_fluxu, ash_fluxu, sm_fluxu, &
-                                      mxdu_fluxu, mxsu_fluxu, mxss_fluxu, mxbc_fluxu, mxash_fluxu, mxsm_fluxu
-   real, pointer, dimension(:,:)   :: du_fluxv, su_fluxv, ss_fluxv, bc_fluxv, ash_fluxv, sm_fluxv, &
-                                      mxdu_fluxv, mxsu_fluxv, mxss_fluxv, mxbc_fluxv, mxash_fluxv, mxsm_fluxv
-   real, pointer, dimension(:,:)   :: du_smass, su_smass, ss_smass, bc_smass, ash_smass, sm_smass, &
-                                      mxdu_smass, mxsu_smass, mxss_smass, mxbc_smass, mxash_smass, mxsm_smass
-   real, pointer, dimension(:,:)   :: du_cmass, su_cmass, ss_cmass, bc_cmass, ash_cmass, sm_cmass, &
-                                      mxdu_cmass, mxsu_cmass, mxss_cmass, mxbc_cmass, mxash_cmass, mxsm_cmass
+   real, pointer, dimension(:,:,:) :: du_mass, su_mass, ss_mass, bc_mass, ash_mass, oc_mass, &
+                                      mxdu_mass, mxsu_mass, mxss_mass, mxbc_mass, mxash_mass, mxoc_mass
+   real, pointer, dimension(:,:,:) :: du_conc, su_conc, ss_conc, bc_conc, ash_conc, oc_conc, &
+                                      mxdu_conc, mxsu_conc, mxss_conc, mxbc_conc, mxash_conc, mxoc_conc
+   real, pointer, dimension(:,:)   :: du_fluxu, su_fluxu, ss_fluxu, bc_fluxu, ash_fluxu, oc_fluxu, &
+                                      mxdu_fluxu, mxsu_fluxu, mxss_fluxu, mxbc_fluxu, mxash_fluxu, mxoc_fluxu
+   real, pointer, dimension(:,:)   :: du_fluxv, su_fluxv, ss_fluxv, bc_fluxv, ash_fluxv, oc_fluxv, &
+                                      mxdu_fluxv, mxsu_fluxv, mxss_fluxv, mxbc_fluxv, mxash_fluxv, mxoc_fluxv
+   real, pointer, dimension(:,:)   :: du_smass, su_smass, ss_smass, bc_smass, ash_smass, oc_smass, &
+                                      mxdu_smass, mxsu_smass, mxss_smass, mxbc_smass, mxash_smass, mxoc_smass
+   real, pointer, dimension(:,:)   :: du_cmass, su_cmass, ss_cmass, bc_cmass, ash_cmass, oc_cmass, &
+                                      mxdu_cmass, mxsu_cmass, mxss_cmass, mxbc_cmass, mxash_cmass, mxoc_cmass
    real, pointer, dimension(:,:)   :: h2so4_cmass
 
 !  Columnar optical quantities: Extinction AOT (??_exttau @ 550 nm), 
 !                               Scattering AOT (??_scatau @ 550 nm),
 !                               Angstrom parameter (??_angstr for 470 and 870 nm wavelength pair)
-   real, pointer, dimension(:,:)   :: du_exttau, su_exttau, ss_exttau, bc_exttau, ash_exttau, sm_exttau
-   real, pointer, dimension(:,:)   :: su_stratexttau, su_stratscatau
-   real, pointer, dimension(:,:)   :: du_scatau, su_scatau, ss_scatau, bc_scatau, ash_scatau, sm_scatau
-   real, pointer, dimension(:,:)   :: du_angstr, su_angstr, ss_angstr, bc_angstr, ash_angstr, sm_angstr
+   real, pointer, dimension(:,:)   :: du_exttau, su_exttau, ss_exttau, bc_exttau, ash_exttau, oc_exttau
+   real, pointer, dimension(:,:)   :: su_stexttau, su_stscatau
+   real, pointer, dimension(:,:)   :: du_scatau, su_scatau, ss_scatau, bc_scatau, ash_scatau, oc_scatau
+   real, pointer, dimension(:,:)   :: du_angstr, su_angstr, ss_angstr, bc_angstr, ash_angstr, oc_angstr
    real, pointer, dimension(:,:)   :: totexttau, totscatau, totangstr
 !  Vertical optical quantities: Extinction coefficient (??_extcoef @ 550 nm in m-1),
 !                               Scattering coefficient (??_scacoef @ 550 nm in m-1)
-   real, pointer, dimension(:,:,:) :: du_extcoef, su_extcoef, ss_extcoef, bc_extcoef, ash_extcoef, sm_extcoef
-   real, pointer, dimension(:,:,:) :: du_scacoef, su_scacoef, ss_scacoef, bc_scacoef, ash_scacoef, sm_scacoef
+   real, pointer, dimension(:,:,:) :: du_extcoef, su_extcoef, ss_extcoef, bc_extcoef, ash_extcoef, oc_extcoef
+   real, pointer, dimension(:,:,:) :: du_scacoef, su_scacoef, ss_scacoef, bc_scacoef, ash_scacoef, oc_scacoef
 
    type(CARMA_Registry), pointer :: reg => null()
    type(carma_type), pointer     :: r => null()
@@ -1562,93 +1591,93 @@ CONTAINS
    call MAPL_GetPointer(expChem, su_mass,     'CARMA_SUMASS',   __RC__)
    call MAPL_GetPointer(expChem, ss_mass,     'CARMA_SSMASS',   __RC__)
    call MAPL_GetPointer(expChem, bc_mass,     'CARMA_BCMASS',   __RC__)
-   call MAPL_GetPointer(expChem, sm_mass,     'CARMA_SMMASS',   __RC__)
+   call MAPL_GetPointer(expChem, oc_mass,     'CARMA_OCMASS',   __RC__)
    call MAPL_GetPointer(expChem, ash_mass,    'CARMA_ASHMASS',   __RC__)
    call MAPL_GetPointer(expChem, mxdu_mass,   'CARMA_MXDUMASS',   __RC__)
    call MAPL_GetPointer(expChem, mxsu_mass,   'CARMA_MXSUMASS',   __RC__)
    call MAPL_GetPointer(expChem, mxss_mass,   'CARMA_MXSSMASS',   __RC__)
    call MAPL_GetPointer(expChem, mxbc_mass,   'CARMA_MXBCMASS',   __RC__)
-   call MAPL_GetPointer(expChem, mxsm_mass,   'CARMA_MXSMMASS',   __RC__)
+   call MAPL_GetPointer(expChem, mxoc_mass,   'CARMA_MXOCMASS',   __RC__)
    call MAPL_GetPointer(expChem, mxash_mass,  'CARMA_MXASHMASS',   __RC__)
    call MAPL_GetPointer(expChem, du_conc,     'CARMA_DUCONC',   __RC__)
    call MAPL_GetPointer(expChem, su_conc,     'CARMA_SUCONC',   __RC__)
    call MAPL_GetPointer(expChem, ss_conc,     'CARMA_SSCONC',   __RC__)
    call MAPL_GetPointer(expChem, bc_conc,     'CARMA_BCCONC',   __RC__)
-   call MAPL_GetPointer(expChem, sm_conc,     'CARMA_SMCONC',   __RC__)
+   call MAPL_GetPointer(expChem, oc_conc,     'CARMA_OCCONC',   __RC__)
    call MAPL_GetPointer(expChem, ash_conc,    'CARMA_ASHCONC',   __RC__)
    call MAPL_GetPointer(expChem, mxdu_conc,   'CARMA_MXDUCONC',   __RC__)
    call MAPL_GetPointer(expChem, mxsu_conc,   'CARMA_MXSUCONC',   __RC__)
    call MAPL_GetPointer(expChem, mxss_conc,   'CARMA_MXSSCONC',   __RC__)
    call MAPL_GetPointer(expChem, mxbc_conc,   'CARMA_MXBCCONC',   __RC__)
-   call MAPL_GetPointer(expChem, mxsm_conc,   'CARMA_MXSMCONC',   __RC__)
+   call MAPL_GetPointer(expChem, mxoc_conc,   'CARMA_MXOCCONC',   __RC__)
    call MAPL_GetPointer(expChem, du_fluxu,    'CARMA_DUFLUXU',   __RC__)
    call MAPL_GetPointer(expChem, su_fluxu,    'CARMA_SUFLUXU',   __RC__)
    call MAPL_GetPointer(expChem, ss_fluxu,    'CARMA_SSFLUXU',   __RC__)
    call MAPL_GetPointer(expChem, bc_fluxu,    'CARMA_BCFLUXU',   __RC__)
-   call MAPL_GetPointer(expChem, sm_fluxu,    'CARMA_SMFLUXU',   __RC__)
+   call MAPL_GetPointer(expChem, oc_fluxu,    'CARMA_OCFLUXU',   __RC__)
    call MAPL_GetPointer(expChem, ash_fluxu,   'CARMA_ASHFLUXU',   __RC__)
    call MAPL_GetPointer(expChem, du_fluxv,    'CARMA_DUFLUXV',   __RC__)
    call MAPL_GetPointer(expChem, su_fluxv,    'CARMA_SUFLUXV',   __RC__)
    call MAPL_GetPointer(expChem, ss_fluxv,    'CARMA_SSFLUXV',   __RC__)
    call MAPL_GetPointer(expChem, bc_fluxv,    'CARMA_BCFLUXV',   __RC__)
-   call MAPL_GetPointer(expChem, sm_fluxv,    'CARMA_SMFLUXV',   __RC__)
+   call MAPL_GetPointer(expChem, oc_fluxv,    'CARMA_OCFLUXV',   __RC__)
    call MAPL_GetPointer(expChem, ash_fluxv,   'CARMA_ASHFLUXV',   __RC__)
    call MAPL_GetPointer(expChem, mxdu_fluxu,  'CARMA_MXDUFLUXU',   __RC__)
    call MAPL_GetPointer(expChem, mxsu_fluxu,  'CARMA_MXSUFLUXU',   __RC__)
    call MAPL_GetPointer(expChem, mxss_fluxu,  'CARMA_MXSSFLUXU',   __RC__)
    call MAPL_GetPointer(expChem, mxbc_fluxu,  'CARMA_MXBCFLUXU',   __RC__)
-   call MAPL_GetPointer(expChem, mxsm_fluxu,  'CARMA_MXSMFLUXU',   __RC__)
+   call MAPL_GetPointer(expChem, mxoc_fluxu,  'CARMA_MXOCFLUXU',   __RC__)
    call MAPL_GetPointer(expChem, mxash_fluxu, 'CARMA_MXASHFLUXU',   __RC__)
    call MAPL_GetPointer(expChem, mxdu_fluxv,  'CARMA_MXDUFLUXV',   __RC__)
    call MAPL_GetPointer(expChem, mxsu_fluxv,  'CARMA_MXSUFLUXV',   __RC__)
    call MAPL_GetPointer(expChem, mxss_fluxv,  'CARMA_MXSSFLUXV',   __RC__)
    call MAPL_GetPointer(expChem, mxbc_fluxv,  'CARMA_MXBCFLUXV',   __RC__)
-   call MAPL_GetPointer(expChem, mxsm_fluxv,  'CARMA_MXSMFLUXV',   __RC__)
+   call MAPL_GetPointer(expChem, mxoc_fluxv,  'CARMA_MXOCFLUXV',   __RC__)
    call MAPL_GetPointer(expChem, mxash_fluxv, 'CARMA_MXASHFLUXV',   __RC__)
    call MAPL_GetPointer(expChem, du_smass,    'CARMA_DUSMASS',   __RC__)
    call MAPL_GetPointer(expChem, su_smass,    'CARMA_SUSMASS',   __RC__)
    call MAPL_GetPointer(expChem, ss_smass,    'CARMA_SSSMASS',   __RC__)
    call MAPL_GetPointer(expChem, bc_smass,    'CARMA_BCSMASS',   __RC__)
-   call MAPL_GetPointer(expChem, sm_smass,    'CARMA_SMSMASS',   __RC__)
+   call MAPL_GetPointer(expChem, oc_smass,    'CARMA_OCSMASS',   __RC__)
    call MAPL_GetPointer(expChem, ash_smass,   'CARMA_ASHSMASS',   __RC__)
    call MAPL_GetPointer(expChem, du_cmass,    'CARMA_DUCMASS',   __RC__)
    call MAPL_GetPointer(expChem, su_cmass,    'CARMA_SUCMASS',   __RC__)
    call MAPL_GetPointer(expChem, ss_cmass,    'CARMA_SSCMASS',   __RC__)
    call MAPL_GetPointer(expChem, bc_cmass,    'CARMA_BCCMASS',   __RC__)
-   call MAPL_GetPointer(expChem, sm_cmass,    'CARMA_SMCMASS',   __RC__)
+   call MAPL_GetPointer(expChem, oc_cmass,    'CARMA_OCCMASS',   __RC__)
    call MAPL_GetPointer(expChem, h2so4_cmass, 'CARMA_H2SO4CMASS', __RC__)
    call MAPL_GetPointer(expChem, ash_cmass,   'CARMA_ASHCMASS',   __RC__)
    call MAPL_GetPointer(expChem, mxdu_smass,  'CARMA_MXDUSMASS',   __RC__)
    call MAPL_GetPointer(expChem, mxsu_smass,  'CARMA_MXSUSMASS',   __RC__)
    call MAPL_GetPointer(expChem, mxss_smass,  'CARMA_MXSSSMASS',   __RC__)
    call MAPL_GetPointer(expChem, mxbc_smass,  'CARMA_MXBCSMASS',   __RC__)
-   call MAPL_GetPointer(expChem, mxsm_smass,  'CARMA_MXSMSMASS',   __RC__)
+   call MAPL_GetPointer(expChem, mxoc_smass,  'CARMA_MXOCSMASS',   __RC__)
    call MAPL_GetPointer(expChem, mxash_smass, 'CARMA_MXASHSMASS',   __RC__)
    call MAPL_GetPointer(expChem, mxdu_cmass,  'CARMA_MXDUCMASS',   __RC__)
    call MAPL_GetPointer(expChem, mxsu_cmass,  'CARMA_MXSUCMASS',   __RC__)
    call MAPL_GetPointer(expChem, mxss_cmass,  'CARMA_MXSSCMASS',   __RC__)
    call MAPL_GetPointer(expChem, mxbc_cmass,  'CARMA_MXBCCMASS',   __RC__)
-   call MAPL_GetPointer(expChem, mxsm_cmass,  'CARMA_MXSMCMASS',   __RC__)
+   call MAPL_GetPointer(expChem, mxoc_cmass,  'CARMA_MXOCCMASS',   __RC__)
    call MAPL_GetPointer(expChem, mxash_cmass, 'CARMA_MXASHCMASS',   __RC__)
    call MAPL_GetPointer(expChem, du_exttau,   'CARMA_DUEXTTAU',   __RC__)
    call MAPL_GetPointer(expChem, su_exttau,   'CARMA_SUEXTTAU',   __RC__)
    call MAPL_GetPointer(expChem, ss_exttau,   'CARMA_SSEXTTAU',   __RC__)
    call MAPL_GetPointer(expChem, bc_exttau,   'CARMA_BCEXTTAU',   __RC__)
-   call MAPL_GetPointer(expChem, sm_exttau,   'CARMA_SMEXTTAU',   __RC__)
+   call MAPL_GetPointer(expChem, oc_exttau,   'CARMA_OCEXTTAU',   __RC__)
    call MAPL_GetPointer(expChem, ash_exttau,  'CARMA_ASHEXTTAU',   __RC__)
-   call MAPL_GetPointer(expChem, su_stratexttau,   'CARMA_SUSTRATEXTTAU',   __RC__)
+   call MAPL_GetPointer(expChem, su_stexttau, 'CARMA_SUSTEXTTAU',   __RC__)
    call MAPL_GetPointer(expChem, du_scatau,   'CARMA_DUSCATAU',   __RC__)
    call MAPL_GetPointer(expChem, su_scatau,   'CARMA_SUSCATAU',   __RC__)
    call MAPL_GetPointer(expChem, ss_scatau,   'CARMA_SSSCATAU',   __RC__)
    call MAPL_GetPointer(expChem, bc_scatau,   'CARMA_BCSCATAU',   __RC__)
-   call MAPL_GetPointer(expChem, sm_scatau,   'CARMA_SMSCATAU',   __RC__)
+   call MAPL_GetPointer(expChem, oc_scatau,   'CARMA_OCSCATAU',   __RC__)
    call MAPL_GetPointer(expChem, ash_scatau,  'CARMA_ASHSCATAU',   __RC__)
-   call MAPL_GetPointer(expChem, su_stratscatau,   'CARMA_SUSTRATSCATAU',   __RC__)
+   call MAPL_GetPointer(expChem, su_stscatau, 'CARMA_SUSTSCATAU',   __RC__)
    call MAPL_GetPointer(expChem, du_angstr,   'CARMA_DUANGSTR',   __RC__)
    call MAPL_GetPointer(expChem, su_angstr,   'CARMA_SUANGSTR',   __RC__)
    call MAPL_GetPointer(expChem, ss_angstr,   'CARMA_SSANGSTR',   __RC__)
    call MAPL_GetPointer(expChem, bc_angstr,   'CARMA_BCANGSTR',   __RC__)
-   call MAPL_GetPointer(expChem, sm_angstr,   'CARMA_SMANGSTR',   __RC__)
+   call MAPL_GetPointer(expChem, oc_angstr,   'CARMA_OCANGSTR',   __RC__)
    call MAPL_GetPointer(expChem, ash_angstr,  'CARMA_ASHANGSTR',   __RC__)
    call MAPL_GetPointer(expChem, totexttau,   'CARMA_TOTEXTTAU',   __RC__)
    call MAPL_GetPointer(expChem, totscatau,   'CARMA_TOTSCATAU',   __RC__)
@@ -1661,8 +1690,8 @@ CONTAINS
    call MAPL_GetPointer(expChem, ss_scacoef,  'CARMA_SSSCACOEF',  __RC__)
    call MAPL_GetPointer(expChem, bc_extcoef,  'CARMA_BCEXTCOEF',  __RC__)
    call MAPL_GetPointer(expChem, bc_scacoef,  'CARMA_BCSCACOEF',  __RC__)
-   call MAPL_GetPointer(expChem, sm_extcoef,  'CARMA_SMEXTCOEF',  __RC__)
-   call MAPL_GetPointer(expChem, sm_scacoef,  'CARMA_SMSCACOEF',  __RC__)
+   call MAPL_GetPointer(expChem, oc_extcoef,  'CARMA_OCEXTCOEF',  __RC__)
+   call MAPL_GetPointer(expChem, oc_scacoef,  'CARMA_OCSCACOEF',  __RC__)
    call MAPL_GetPointer(expChem, ash_extcoef, 'CARMA_ASHEXTCOEF',  __RC__)
    call MAPL_GetPointer(expChem, ash_scacoef, 'CARMA_ASHSCACOEF',  __RC__)
 
@@ -1675,25 +1704,25 @@ CONTAINS
    if( associated(SU_mass))    SU_mass(:,:,:) = 0.
    if( associated(SS_mass))    SS_mass(:,:,:) = 0.
    if( associated(BC_mass))    BC_mass(:,:,:) = 0.
-   if( associated(SM_mass))    SM_mass(:,:,:) = 0.
+   if( associated(OC_mass))    OC_mass(:,:,:) = 0.
    if( associated(ASH_mass))   ASH_mass(:,:,:) = 0.
    if( associated(DU_conc))    DU_conc(:,:,:) = 0.
    if( associated(SU_conc))    SU_conc(:,:,:) = 0.
    if( associated(SS_conc))    SS_conc(:,:,:) = 0.
    if( associated(BC_conc))    BC_conc(:,:,:) = 0.
-   if( associated(SM_conc))    SM_conc(:,:,:) = 0.
+   if( associated(OC_conc))    OC_conc(:,:,:) = 0.
    if( associated(ASH_conc))   ASH_conc(:,:,:) = 0.
    if( associated(MXDU_mass))  MXDU_mass(:,:,:) = 0.
    if( associated(MXSU_mass))  MXSU_mass(:,:,:) = 0.
    if( associated(MXSS_mass))  MXSS_mass(:,:,:) = 0.
    if( associated(MXBC_mass))  MXBC_mass(:,:,:) = 0.
-   if( associated(MXSM_mass))  MXSM_mass(:,:,:) = 0.
+   if( associated(MXOC_mass))  MXOC_mass(:,:,:) = 0.
    if( associated(MXASH_mass)) MXASH_mass(:,:,:) = 0.
    if( associated(MXDU_conc))  MXDU_conc(:,:,:) = 0.
    if( associated(MXSU_conc))  MXSU_conc(:,:,:) = 0.
    if( associated(MXSS_conc))  MXSS_conc(:,:,:) = 0.
    if( associated(MXBC_conc))  MXBC_conc(:,:,:) = 0.
-   if( associated(MXSM_conc))  MXSM_conc(:,:,:) = 0.
+   if( associated(MXOC_conc))  MXOC_conc(:,:,:) = 0.
    if( associated(MXASH_conc)) MXASH_conc(:,:,:) = 0.
 
 !  Mass Fluxes (size integrated)
@@ -1702,25 +1731,25 @@ CONTAINS
    if( associated(SU_fluxu))    SU_fluxu(:,:) = 0.
    if( associated(SS_fluxu))    SS_fluxu(:,:) = 0.
    if( associated(BC_fluxu))    BC_fluxu(:,:) = 0.
-   if( associated(SM_fluxu))    SM_fluxu(:,:) = 0.
+   if( associated(OC_fluxu))    OC_fluxu(:,:) = 0.
    if( associated(ASH_fluxu))   ASH_fluxu(:,:) = 0.
    if( associated(DU_fluxv))    DU_fluxv(:,:) = 0.
    if( associated(SU_fluxv))    SU_fluxv(:,:) = 0.
    if( associated(SS_fluxv))    SS_fluxv(:,:) = 0.
    if( associated(BC_fluxv))    BC_fluxv(:,:) = 0.
-   if( associated(SM_fluxv))    SM_fluxv(:,:) = 0.
+   if( associated(OC_fluxv))    OC_fluxv(:,:) = 0.
    if( associated(ASH_fluxv))   ASH_fluxv(:,:) = 0.
    if( associated(MXDU_fluxu))  MXDU_fluxu(:,:) = 0.
    if( associated(MXSU_fluxu))  MXSU_fluxu(:,:) = 0.
    if( associated(MXSS_fluxu))  MXSS_fluxu(:,:) = 0.
    if( associated(MXBC_fluxu))  MXBC_fluxu(:,:) = 0.
-   if( associated(MXSM_fluxu))  MXSM_fluxu(:,:) = 0.
+   if( associated(MXOC_fluxu))  MXOC_fluxu(:,:) = 0.
    if( associated(MXASH_fluxu)) MXASH_fluxu(:,:) = 0.
    if( associated(MXDU_fluxv))  MXDU_fluxv(:,:) = 0.
    if( associated(MXSU_fluxv))  MXSU_fluxv(:,:) = 0.
    if( associated(MXSS_fluxv))  MXSS_fluxv(:,:) = 0.
    if( associated(MXBC_fluxv))  MXBC_fluxv(:,:) = 0.
-   if( associated(MXSM_fluxv))  MXSM_fluxv(:,:) = 0.
+   if( associated(MXOC_fluxv))  MXOC_fluxv(:,:) = 0.
    if( associated(MXASH_fluxv)) MXASH_fluxv(:,:) = 0.
 
 
@@ -1730,13 +1759,13 @@ CONTAINS
    if( associated(SU_smass))    SU_smass(:,:) = 0.
    if( associated(SS_smass))    SS_smass(:,:) = 0.
    if( associated(BC_smass))    BC_smass(:,:) = 0.
-   if( associated(SM_smass))    SM_smass(:,:) = 0.
+   if( associated(OC_smass))    OC_smass(:,:) = 0.
    if( associated(ASH_smass))   ASH_smass(:,:) = 0.
    if( associated(MXDU_smass))  MXDU_smass(:,:) = 0.
    if( associated(MXSU_smass))  MXSU_smass(:,:) = 0.
    if( associated(MXSS_smass))  MXSS_smass(:,:) = 0.
    if( associated(MXBC_smass))  MXBC_smass(:,:) = 0.
-   if( associated(MXSM_smass))  MXSM_smass(:,:) = 0.
+   if( associated(MXOC_smass))  MXOC_smass(:,:) = 0.
    if( associated(MXASH_smass)) MXASH_smass(:,:) = 0.
 
 !  Column Loading (size integrated)
@@ -1746,13 +1775,13 @@ CONTAINS
    if( associated(SU_cmass))    SU_cmass(:,:) = 0.
    if( associated(SS_cmass))    SS_cmass(:,:) = 0.
    if( associated(BC_cmass))    BC_cmass(:,:) = 0.
-   if( associated(SM_cmass))    SM_cmass(:,:) = 0.
+   if( associated(OC_cmass))    OC_cmass(:,:) = 0.
    if( associated(ASH_cmass))   ASH_cmass(:,:) = 0.
    if( associated(MXDU_cmass))  MXDU_cmass(:,:) = 0.
    if( associated(MXSU_cmass))  MXSU_cmass(:,:) = 0.
    if( associated(MXSS_cmass))  MXSS_cmass(:,:) = 0.
    if( associated(MXBC_cmass))  MXBC_cmass(:,:) = 0.
-   if( associated(MXSM_cmass))  MXSM_cmass(:,:) = 0.
+   if( associated(MXOC_cmass))  MXOC_cmass(:,:) = 0.
    if( associated(MXASH_cmass)) MXASH_cmass(:,:) = 0.
 
 
@@ -1771,7 +1800,7 @@ CONTAINS
      dq = qa(n)%data3d(:,:,k) * rhoa(:,:,k)
      if(associated(DU_smass)  .and. igroup .eq. reg%igrp_dust)         DU_smass = DU_smass + dq
      if(associated(SS_smass)  .and. igroup .eq. reg%igrp_seasalt)      SS_smass = SS_smass + dq
-     if(associated(SM_smass)  .and. igroup .eq. reg%igrp_smoke)        SM_smass = SM_smass + dq
+     if(associated(OC_smass)  .and. igroup .eq. reg%igrp_organic_carbon)        OC_smass = OC_smass + dq
      if(associated(SU_smass)  .and. igroup .eq. reg%igrp_sulfate)      SU_smass = SU_smass + dq
      if(associated(BC_smass)  .and. igroup .eq. reg%igrp_black_carbon) BC_smass = BC_smass + dq
      if(associated(ASH_smass) .and. igroup .eq. reg%igrp_ash)          ASH_smass = ASH_smass + dq
@@ -1779,13 +1808,13 @@ CONTAINS
      if(igroup .eq. reg%igrp_mixed) then
       if(associated(MXDU_smass) .and. ielem .eq. reg%ielm_mxdust)      MXDU_smass = MXDU_smass + dq
       if(associated(MXSS_smass) .and. ielem .eq. reg%ielm_mxseasalt)   MXSS_smass = MXSS_smass + dq
-      if(associated(MXSM_smass) .and. ielem .eq. reg%ielm_mxsmoke)     MXSM_smass = MXSM_smass + dq
+      if(associated(MXOC_smass) .and. ielem .eq. reg%ielm_mxoc)     MXOC_smass = MXOC_smass + dq
       if(associated(MXSU_smass) .and. ielem .eq. reg%ielm_mxsulfate)   MXSU_smass = MXSU_smass + dq
       if(associated(MXBC_smass)  .and. ielem .eq. reg%ielm_mxbc)       MXBC_smass = MXBC_smass + dq
       if(associated(MXASH_smass) .and. ielem .eq. reg%ielm_ash)        MXASH_smass = MXASH_smass + dq
 !     subtract cores
       if(associated(MXSU_smass) .and. ielem .eq. reg%ielm_mxdust)      MXSU_smass = MXSU_smass - dq
-      if(associated(MXSU_smass) .and. ielem .eq. reg%ielm_mxsmoke)     MXSU_smass = MXSU_smass - dq
+      if(associated(MXSU_smass) .and. ielem .eq. reg%ielm_mxoc)     MXSU_smass = MXSU_smass - dq
       if(associated(MXSU_smass) .and. ielem .eq. reg%ielm_mxseasalt)   MXSU_smass = MXSU_smass - dq
       if(associated(MXSU_smass) .and. ielem .eq. reg%ielm_mxbc)        MXSU_smass = MXSU_smass - dq
       if(associated(MXSU_smass) .and. ielem .eq. reg%ielm_mxash)       MXSU_smass = MXSU_smass - dq
@@ -1795,7 +1824,7 @@ CONTAINS
 !    ----------------------------
      if(associated(DU_mass)  .and. igroup .eq. reg%igrp_dust)         DU_mass = DU_mass + qa(n)%data3d
      if(associated(SS_mass)  .and. igroup .eq. reg%igrp_seasalt)      SS_mass = SS_mass + qa(n)%data3d
-     if(associated(SM_mass)  .and. igroup .eq. reg%igrp_smoke)        SM_mass = SM_mass + qa(n)%data3d
+     if(associated(OC_mass)  .and. igroup .eq. reg%igrp_organic_carbon)        OC_mass = OC_mass + qa(n)%data3d
      if(associated(SU_mass)  .and. igroup .eq. reg%igrp_sulfate)      SU_mass = SU_mass + qa(n)%data3d
      if(associated(BC_mass)  .and. igroup .eq. reg%igrp_black_carbon) BC_mass = BC_mass + qa(n)%data3d
      if(associated(ASH_mass) .and. igroup .eq. reg%igrp_ash)          ASH_mass = ASH_mass + qa(n)%data3d
@@ -1803,13 +1832,13 @@ CONTAINS
      if(igroup .eq. reg%igrp_mixed) then
       if(associated(MXDU_mass) .and. ielem .eq. reg%ielm_mxdust)      MXDU_mass = MXDU_mass + qa(n)%data3d
       if(associated(MXSS_mass) .and. ielem .eq. reg%ielm_mxseasalt)   MXSS_mass = MXSS_mass + qa(n)%data3d
-      if(associated(MXSM_mass) .and. ielem .eq. reg%ielm_mxsmoke)     MXSM_mass = MXSM_mass + qa(n)%data3d
+      if(associated(MXOC_mass) .and. ielem .eq. reg%ielm_mxoc)     MXOC_mass = MXOC_mass + qa(n)%data3d
       if(associated(MXSU_mass) .and. ielem .eq. reg%ielm_mxsulfate)   MXSU_mass = MXSU_mass + qa(n)%data3d
       if(associated(MXBC_mass)  .and. ielem .eq. reg%ielm_mxbc)       MXBC_mass = MXBC_mass + qa(n)%data3d
       if(associated(MXASH_mass) .and. ielem .eq. reg%ielm_ash)        MXASH_mass = MXASH_mass + qa(n)%data3d
 !     subtract cores
       if(associated(MXSU_mass) .and. ielem .eq. reg%ielm_mxdust)      MXSU_mass = MXSU_mass - qa(n)%data3d
-      if(associated(MXSU_mass) .and. ielem .eq. reg%ielm_mxsmoke)     MXSU_mass = MXSU_mass - qa(n)%data3d
+      if(associated(MXSU_mass) .and. ielem .eq. reg%ielm_mxoc)     MXSU_mass = MXSU_mass - qa(n)%data3d
       if(associated(MXSU_mass) .and. ielem .eq. reg%ielm_mxseasalt)   MXSU_mass = MXSU_mass - qa(n)%data3d
       if(associated(MXSU_mass) .and. ielem .eq. reg%ielm_mxbc)        MXSU_mass = MXSU_mass - qa(n)%data3d
       if(associated(MXSU_mass) .and. ielem .eq. reg%ielm_mxash)       MXSU_mass = MXSU_mass - qa(n)%data3d
@@ -1819,7 +1848,7 @@ CONTAINS
 !    -----------------------------
      if(associated(DU_conc)  .and. igroup .eq. reg%igrp_dust)         DU_conc = DU_conc + qa(n)%data3d*rhoa
      if(associated(SS_conc)  .and. igroup .eq. reg%igrp_seasalt)      SS_conc = SS_conc + qa(n)%data3d*rhoa
-     if(associated(SM_conc)  .and. igroup .eq. reg%igrp_smoke)        SM_conc = SM_conc + qa(n)%data3d*rhoa
+     if(associated(OC_conc)  .and. igroup .eq. reg%igrp_organic_carbon)        OC_conc = OC_conc + qa(n)%data3d*rhoa
      if(associated(SU_conc)  .and. igroup .eq. reg%igrp_sulfate)      SU_conc = SU_conc + qa(n)%data3d*rhoa
      if(associated(BC_conc)  .and. igroup .eq. reg%igrp_black_carbon) BC_conc = BC_conc + qa(n)%data3d*rhoa
      if(associated(ASH_conc) .and. igroup .eq. reg%igrp_ash)          ASH_conc = ASH_conc + qa(n)%data3d*rhoa
@@ -1827,13 +1856,13 @@ CONTAINS
      if(igroup .eq. reg%igrp_mixed) then
       if(associated(MXDU_conc) .and. ielem .eq. reg%ielm_mxdust)      MXDU_conc = MXDU_conc + qa(n)%data3d*rhoa
       if(associated(MXSS_conc) .and. ielem .eq. reg%ielm_mxseasalt)   MXSS_conc = MXSS_conc + qa(n)%data3d*rhoa
-      if(associated(MXSM_conc) .and. ielem .eq. reg%ielm_mxsmoke)     MXSM_conc = MXSM_conc + qa(n)%data3d*rhoa
+      if(associated(MXOC_conc) .and. ielem .eq. reg%ielm_mxoc)     MXOC_conc = MXOC_conc + qa(n)%data3d*rhoa
       if(associated(MXSU_conc) .and. ielem .eq. reg%ielm_mxsulfate)   MXSU_conc = MXSU_conc + qa(n)%data3d*rhoa
       if(associated(MXBC_conc)  .and. ielem .eq. reg%ielm_mxbc)       MXBC_conc = MXBC_conc + qa(n)%data3d*rhoa
       if(associated(MXASH_conc) .and. ielem .eq. reg%ielm_ash)        MXASH_conc = MXASH_conc + qa(n)%data3d*rhoa
 !     subtract cores
       if(associated(MXSU_conc) .and. ielem .eq. reg%ielm_mxdust)      MXSU_conc = MXSU_conc - qa(n)%data3d*rhoa
-      if(associated(MXSU_conc) .and. ielem .eq. reg%ielm_mxsmoke)     MXSU_conc = MXSU_conc - qa(n)%data3d*rhoa
+      if(associated(MXSU_conc) .and. ielem .eq. reg%ielm_mxoc)     MXSU_conc = MXSU_conc - qa(n)%data3d*rhoa
       if(associated(MXSU_conc) .and. ielem .eq. reg%ielm_mxseasalt)   MXSU_conc = MXSU_conc - qa(n)%data3d*rhoa
       if(associated(MXSU_mass) .and. ielem .eq. reg%ielm_mxbc)        MXSU_mass = MXSU_mass - qa(n)%data3d*rhoa
       if(associated(MXSU_mass) .and. ielem .eq. reg%ielm_mxash)       MXSU_mass = MXSU_mass - qa(n)%data3d*rhoa
@@ -1847,7 +1876,7 @@ CONTAINS
       dq = qa(n)%data3d(:,:,k) * (ple(:,:,k)-ple(:,:,k-1))/grav_mks
       if(associated(DU_cmass)  .and. igroup .eq. reg%igrp_dust)         DU_cmass = DU_cmass + dq
       if(associated(SS_cmass)  .and. igroup .eq. reg%igrp_seasalt)      SS_cmass = SS_cmass + dq
-      if(associated(SM_cmass)  .and. igroup .eq. reg%igrp_smoke)        SM_cmass = SM_cmass + dq
+      if(associated(OC_cmass)  .and. igroup .eq. reg%igrp_organic_carbon)        OC_cmass = OC_cmass + dq
       if(associated(SU_cmass)  .and. igroup .eq. reg%igrp_sulfate)      SU_cmass = SU_cmass + dq
       if(associated(BC_cmass)  .and. igroup .eq. reg%igrp_black_carbon) BC_cmass = BC_cmass + dq
       if(associated(ASH_cmass) .and. igroup .eq. reg%igrp_ash)          ASH_cmass = ASH_cmass + dq
@@ -1855,13 +1884,13 @@ CONTAINS
       if(igroup .eq. reg%igrp_mixed) then
        if(associated(MXDU_cmass) .and. ielem .eq. reg%ielm_mxdust)      MXDU_cmass = MXDU_cmass + dq
        if(associated(MXSS_cmass) .and. ielem .eq. reg%ielm_mxseasalt)   MXSS_cmass = MXSS_cmass + dq
-       if(associated(MXSM_cmass) .and. ielem .eq. reg%ielm_mxsmoke)     MXSM_cmass = MXSM_cmass + dq
+       if(associated(MXOC_cmass) .and. ielem .eq. reg%ielm_mxoc)     MXOC_cmass = MXOC_cmass + dq
        if(associated(MXSU_cmass) .and. ielem .eq. reg%ielm_mxsulfate)   MXSU_cmass = MXSU_cmass + dq
        if(associated(MXBC_cmass)  .and. igroup .eq. reg%igrp_black_carbon) MXBC_cmass = MXBC_cmass + dq
        if(associated(MXASH_cmass) .and. igroup .eq. reg%igrp_ash)          MXASH_cmass = MXASH_cmass + dq
 !      subtract cores
        if(associated(MXSU_cmass) .and. ielem .eq. reg%ielm_mxdust)      MXSU_cmass = MXSU_cmass - dq
-       if(associated(MXSU_cmass) .and. ielem .eq. reg%ielm_mxsmoke)     MXSU_cmass = MXSU_cmass - dq
+       if(associated(MXSU_cmass) .and. ielem .eq. reg%ielm_mxoc)     MXSU_cmass = MXSU_cmass - dq
        if(associated(MXSU_cmass) .and. ielem .eq. reg%ielm_mxseasalt)   MXSU_cmass = MXSU_cmass - dq
       endif
 
@@ -1870,7 +1899,7 @@ CONTAINS
       dq = qa(n)%data3d(:,:,k) * (ple(:,:,k)-ple(:,:,k-1))/grav_mks*u(:,:,k)
       if(associated(DU_fluxu)  .and. igroup .eq. reg%igrp_dust)         DU_fluxu = DU_fluxu + dq
       if(associated(SS_fluxu)  .and. igroup .eq. reg%igrp_seasalt)      SS_fluxu = SS_fluxu + dq
-      if(associated(SM_fluxu)  .and. igroup .eq. reg%igrp_smoke)        SM_fluxu = SM_fluxu + dq
+      if(associated(OC_fluxu)  .and. igroup .eq. reg%igrp_organic_carbon)        OC_fluxu = OC_fluxu + dq
       if(associated(SU_fluxu)  .and. igroup .eq. reg%igrp_sulfate)      SU_fluxu = SU_fluxu + dq
       if(associated(BC_fluxu)  .and. igroup .eq. reg%igrp_black_carbon) BC_fluxu = BC_fluxu + dq
       if(associated(ASH_fluxu) .and. igroup .eq. reg%igrp_ash)          ASH_fluxu = ASH_fluxu + dq
@@ -1878,13 +1907,13 @@ CONTAINS
       if(igroup .eq. reg%igrp_mixed) then
        if(associated(MXDU_fluxu) .and. ielem .eq. reg%ielm_mxdust)      MXDU_fluxu = MXDU_fluxu + dq
        if(associated(MXSS_fluxu) .and. ielem .eq. reg%ielm_mxseasalt)   MXSS_fluxu = MXSS_fluxu + dq
-       if(associated(MXSM_fluxu) .and. ielem .eq. reg%ielm_mxsmoke)     MXSM_fluxu = MXSM_fluxu + dq
+       if(associated(MXOC_fluxu) .and. ielem .eq. reg%ielm_mxoc)     MXOC_fluxu = MXOC_fluxu + dq
        if(associated(MXSU_fluxu) .and. ielem .eq. reg%ielm_mxsulfate)   MXSU_fluxu = MXSU_fluxu + dq
        if(associated(MXBC_fluxu)  .and. ielem .eq. reg%ielm_mxbc)       MXBC_fluxu = MXBC_fluxu + dq
        if(associated(MXASH_fluxu) .and. ielem .eq. reg%ielm_ash)        MXASH_fluxu = MXASH_fluxu + dq
 !      subtract cores
        if(associated(MXSU_fluxu) .and. ielem .eq. reg%ielm_mxdust)      MXSU_fluxu = MXSU_fluxu - dq
-       if(associated(MXSU_fluxu) .and. ielem .eq. reg%ielm_mxsmoke)     MXSU_fluxu = MXSU_fluxu - dq
+       if(associated(MXSU_fluxu) .and. ielem .eq. reg%ielm_mxoc)     MXSU_fluxu = MXSU_fluxu - dq
        if(associated(MXSU_fluxu) .and. ielem .eq. reg%ielm_mxseasalt)   MXSU_fluxu = MXSU_fluxu - dq
        if(associated(MXSU_fluxu) .and. ielem .eq. reg%ielm_mxbc)        MXSU_fluxu = MXSU_fluxu - dq
        if(associated(MXSU_fluxu) .and. ielem .eq. reg%ielm_mxash)       MXSU_fluxu = MXSU_fluxu - dq
@@ -1895,7 +1924,7 @@ CONTAINS
       dq = qa(n)%data3d(:,:,k) * (ple(:,:,k)-ple(:,:,k-1))/grav_mks*v(:,:,k)
       if(associated(DU_fluxv)  .and. igroup .eq. reg%igrp_dust)         DU_fluxv = DU_fluxv + dq
       if(associated(SS_fluxv)  .and. igroup .eq. reg%igrp_seasalt)      SS_fluxv = SS_fluxv + dq
-      if(associated(SM_fluxv)  .and. igroup .eq. reg%igrp_smoke)        SM_fluxv = SM_fluxv + dq
+      if(associated(OC_fluxv)  .and. igroup .eq. reg%igrp_organic_carbon)        OC_fluxv = OC_fluxv + dq
       if(associated(SU_fluxv)  .and. igroup .eq. reg%igrp_sulfate)      SU_fluxv = SU_fluxv + dq
       if(associated(BC_fluxv)  .and. igroup .eq. reg%igrp_black_carbon) BC_fluxv = BC_fluxv + dq
       if(associated(ASH_fluxv) .and. igroup .eq. reg%igrp_ash)          ASH_fluxv = ASH_fluxv + dq
@@ -1903,13 +1932,13 @@ CONTAINS
       if(igroup .eq. reg%igrp_mixed) then
        if(associated(MXDU_fluxv) .and. ielem .eq. reg%ielm_mxdust)      MXDU_fluxv = MXDU_fluxv + dq
        if(associated(MXSS_fluxv) .and. ielem .eq. reg%ielm_mxseasalt)   MXSS_fluxv = MXSS_fluxv + dq
-       if(associated(MXSM_fluxv) .and. ielem .eq. reg%ielm_mxsmoke)     MXSM_fluxv = MXSM_fluxv + dq
+       if(associated(MXOC_fluxv) .and. ielem .eq. reg%ielm_mxoc)     MXOC_fluxv = MXOC_fluxv + dq
        if(associated(MXSU_fluxv) .and. ielem .eq. reg%ielm_mxsulfate)   MXSU_fluxv = MXSU_fluxv + dq
        if(associated(MXBC_fluxv)  .and. ielem .eq. reg%ielm_mxbc)       MXBC_fluxv = MXBC_fluxv + dq
        if(associated(MXASH_fluxv) .and. ielem .eq. reg%ielm_ash)        MXASH_fluxv = MXASH_fluxv + dq
 !      subtract cores
        if(associated(MXSU_fluxv) .and. ielem .eq. reg%ielm_mxdust)      MXSU_fluxv = MXSU_fluxv - dq
-       if(associated(MXSU_fluxv) .and. ielem .eq. reg%ielm_mxsmoke)     MXSU_fluxv = MXSU_fluxv - dq
+       if(associated(MXSU_fluxv) .and. ielem .eq. reg%ielm_mxoc)     MXSU_fluxv = MXSU_fluxv - dq
        if(associated(MXSU_fluxv) .and. ielem .eq. reg%ielm_mxseasalt)   MXSU_fluxv = MXSU_fluxv - dq
        if(associated(MXSU_fluxv) .and. ielem .eq. reg%ielm_mxbc)        MXSU_fluxv = MXSU_fluxv - dq
        if(associated(MXSU_fluxv) .and. ielem .eq. reg%ielm_mxash)       MXSU_fluxv = MXSU_fluxv - dq
@@ -1969,7 +1998,7 @@ CONTAINS
       ( associated(DU_angstr) .or. &
         associated(BC_angstr) .or. &
         associated(BC_angstr) .or. &
-        associated(SM_angstr) .or. &
+        associated(OC_angstr) .or. &
         associated(ASH_angstr) .or. &
         associated(totangstr) &
       ) ) do_angstrom = .true.
@@ -1998,8 +2027,8 @@ CONTAINS
    if( associated(SU_scatau)) SU_scatau(:,:) = 0.
    if( associated(SU_angstr)) SU_angstr(:,:) = 0.
 
-   if( associated(SU_stratexttau)) SU_stratexttau(:,:) = 0.
-   if( associated(SU_stratscatau)) SU_stratscatau(:,:) = 0.
+   if( associated(SU_stexttau)) SU_stexttau(:,:) = 0.
+   if( associated(SU_stscatau)) SU_stscatau(:,:) = 0.
 
    if( associated(SS_exttau)) SS_exttau(:,:) = 0.
    if( associated(SS_scatau)) SS_scatau(:,:) = 0.
@@ -2009,9 +2038,9 @@ CONTAINS
    if( associated(BC_scatau)) BC_scatau(:,:) = 0.
    if( associated(BC_angstr)) BC_angstr(:,:) = 0.
 
-   if( associated(SM_exttau)) SM_exttau(:,:) = 0.
-   if( associated(SM_scatau)) SM_scatau(:,:) = 0.
-   if( associated(SM_angstr)) SM_angstr(:,:) = 0.
+   if( associated(OC_exttau)) OC_exttau(:,:) = 0.
+   if( associated(OC_scatau)) OC_scatau(:,:) = 0.
+   if( associated(OC_angstr)) OC_angstr(:,:) = 0.
 
    if( associated(ASH_exttau)) ASH_exttau(:,:) = 0.
    if( associated(ASH_scatau)) ASH_scatau(:,:) = 0.
@@ -2025,8 +2054,8 @@ CONTAINS
    if( associated(SU_scacoef)) SU_scacoef(:,:,:) = 0.
    if( associated(BC_extcoef)) BC_extcoef(:,:,:) = 0.
    if( associated(BC_scacoef)) BC_scacoef(:,:,:) = 0.
-   if( associated(SM_extcoef)) SM_extcoef(:,:,:) = 0.
-   if( associated(SM_scacoef)) SM_scacoef(:,:,:) = 0.
+   if( associated(OC_extcoef)) OC_extcoef(:,:,:) = 0.
+   if( associated(OC_scacoef)) OC_scacoef(:,:,:) = 0.
    if( associated(ASH_extcoef)) ASH_extcoef(:,:,:) = 0.
    if( associated(ASH_scacoef)) ASH_scacoef(:,:,:) = 0.
 
@@ -2107,8 +2136,8 @@ CONTAINS
 !  -------
    if( associated(SU_exttau) .or. associated(SU_scatau) .or. &
        associated(SU_extcoef) .or. associated(SU_scacoef) .or. &
-       associated(SU_angstr) .or. associated(SU_stratexttau) .or. &
-       associated(SU_stratscatau) ) then
+       associated(SU_angstr) .or. associated(SU_stexttau) .or. &
+       associated(SU_stscatau) ) then
 
      if(do_angstrom)tau470(i1:i2,j1:j2) = tiny(1.0)
      if(do_angstrom)tau870(i1:i2,j1:j2) = tiny(1.0)
@@ -2150,11 +2179,11 @@ CONTAINS
               endif
 
               if( ple(i,j,k) < tropp(i,j) ) then
-                  if( associated(SU_stratexttau) ) then
-                      SU_stratexttau(i,j) = SU_stratexttau(i,j) + tau
+                  if( associated(SU_stexttau) ) then
+                      SU_stexttau(i,j) = SU_stexttau(i,j) + tau
                   endif
-                  if( associated(SU_stratscatau) ) then
-                      SU_stratscatau(i,j) = SU_stratscatau(i,j) + tau*ssa
+                  if( associated(SU_stscatau) ) then
+                      SU_stscatau(i,j) = SU_stscatau(i,j) + tau*ssa
                   endif
               endif
 
@@ -2334,11 +2363,11 @@ CONTAINS
    endif
 
 
-!  Smoke
+!  Organic carbon
 !  -----
-   if( associated(SM_exttau) .or. associated(SM_scatau) .or. &
-       associated(SM_extcoef) .or. associated(SM_scacoef) .or. &
-       associated(SM_angstr)  ) then
+   if( associated(OC_exttau) .or. associated(OC_scatau) .or. &
+       associated(OC_extcoef) .or. associated(OC_scacoef) .or. &
+       associated(OC_angstr)  ) then
 
      if(do_angstrom)tau470(i1:i2,j1:j2) = tiny(1.0)
      if(do_angstrom)tau870(i1:i2,j1:j2) = tiny(1.0)
@@ -2348,8 +2377,8 @@ CONTAINS
       igroup = reg%igroup(ielem)
       groupname = ESMF_UtilStringUpperCase(trim(reg%groupname(igroup)))
       elemname  = ESMF_UtilStringUpperCase(trim(reg%elemname(ielem)))
-      if(  groupname == 'SMOKE' .or. &
-         ( groupname == 'MIXEDP' .AND. elemname  == 'SMOKE'      )) then
+      if(  groupname == 'ORGANICCARBON' .or. &
+         ( groupname == 'MIXEDP' .AND. elemname  == 'ORGANICCARBON'      )) then
 
       do ibin = 1, reg%NBIN
        n = n1 + (ielem-1)*reg%NBIN + ibin - 1
@@ -2367,19 +2396,19 @@ CONTAINS
               call Chem_MieQuery(mie, idx, ilam550, &
                     qa(n)%data3d(i,j,k)*delp/grav_mks, &
                     rh(i,j,k), tau=tau, ssa=ssa)
-              if (associated(SM_exttau)) SM_exttau(i,j) = SM_exttau(i,j) + tau
-              if (associated(SM_scatau)) SM_scatau(i,j) = SM_scatau(i,j) + ssa*tau
+              if (associated(OC_exttau)) OC_exttau(i,j) = OC_exttau(i,j) + tau
+              if (associated(OC_scatau)) OC_scatau(i,j) = OC_scatau(i,j) + ssa*tau
 
-              if( associated(SM_extcoef) ) then
-                  SM_extcoef(i,j,k) = SM_extcoef(i,j,k) + &
+              if( associated(OC_extcoef) ) then
+                  OC_extcoef(i,j,k) = OC_extcoef(i,j,k) + &
                                       tau * (grav_mks * rhoa(i,j,k) / delp)
               endif
-              if( associated(SM_scacoef) ) then
-                  SM_scacoef(i,j,k) = SM_scacoef(i,j,k) + &
+              if( associated(OC_scacoef) ) then
+                  OC_scacoef(i,j,k) = OC_scacoef(i,j,k) + &
                                       ssa * tau * (grav_mks * rhoa(i,j,k) / delp)
               endif
 
-              if (associated(SM_angstr) .and. do_angstrom) then
+              if (associated(OC_angstr) .and. do_angstrom) then
                call Chem_MieQuery(mie, idx, ilam470, &
                      qa(n)%data3d(i,j,k)*delp/grav_mks, &
                      rh(i,j,k), tau=tau)
@@ -2401,8 +2430,8 @@ CONTAINS
      end do
    endif
 
-   if (associated(SM_angstr) .and. do_angstrom) then
-         SM_angstr(i1:i2,j1:j2) = &
+   if (associated(OC_angstr) .and. do_angstrom) then
+         OC_angstr(i1:i2,j1:j2) = &
            -log(tau470(i1:i2,j1:j2)/tau870(i1:i2,j1:j2)) / &
             log(470./870.)
    endif
@@ -2414,14 +2443,14 @@ CONTAINS
         if ( associated(SU_exttau)) totexttau = totexttau + SU_exttau
         if ( associated(SS_exttau)) totexttau = totexttau + SS_exttau
         if ( associated(BC_exttau)) totexttau = totexttau + BC_exttau
-        if ( associated(SM_exttau)) totexttau = totexttau + SM_exttau
+        if ( associated(OC_exttau)) totexttau = totexttau + OC_exttau
        endif
        if  ( associated(totscatau)) then
         if ( associated(DU_scatau)) totscatau = totscatau + DU_scatau
         if ( associated(SU_scatau)) totscatau = totscatau + SU_scatau
         if ( associated(SS_scatau)) totscatau = totscatau + SS_scatau
         if ( associated(BC_scatau)) totscatau = totscatau + BC_scatau
-        if ( associated(SM_scatau)) totscatau = totscatau + SM_scatau
+        if ( associated(OC_scatau)) totscatau = totscatau + OC_scatau
        endif
        if (associated(totangstr) .and. do_angstrom) then
          totangstr(i1:i2,j1:j2) = &
@@ -2505,7 +2534,7 @@ CONTAINS
    mie%du_optics_file = reg%du_optics_file
    mie%ss_optics_file = reg%ss_optics_file
    mie%bc_optics_file = reg%bc_optics_file
-   mie%oc_optics_file = reg%sm_optics_file  ! Note I am using OC table hook for smoke
+   mie%oc_optics_file = reg%oc_optics_file
    mie%su_optics_file = reg%su_optics_file
 
 !  Allocate and fill Mie tables
@@ -2556,8 +2585,8 @@ CONTAINS
         mie%vindex(iq) = ibin
         mie%vtable(iq) = mie%mie_BC
        endif
-       if(  groupname == 'SMOKE' .OR. &
-          ( groupname == 'MIXEDP' .AND. elemname  == 'SMOKE'  ) ) then
+       if(  groupname == 'ORGANICCARBON' .OR. &
+          ( groupname == 'MIXEDP' .AND. elemname  == 'ORGANICCARBON'  ) ) then
         mie%vindex(iq) = ibin
         mie%vtable(iq) = mie%mie_OC
        endif

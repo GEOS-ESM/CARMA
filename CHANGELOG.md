@@ -17,6 +17,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Deprecated
 
+## [1.2.0] - 2026-05-21
+
+### Added
+- Updated ExtData.yaml to point to current GOCART (2.5.4) AMIP emissions
+- Additional hooks for multi-species CARMA, including specifying initial
+  PSD in Registry
+
+### Changed
+- Moved Import/Export decalarations to StateSpecs versus living solely in Registry
+
 ## [1.1.0] - 2025-01-24
 
 ### Added
