@@ -88,7 +88,7 @@
 !  Dust
    real, pointer, dimension(:,:) :: dust_source => null()
 
-!  Smoke
+!  Organic Carbon
 
 !  Sulfate
    real, pointer :: vLat(:)    => null(), &
@@ -109,24 +109,25 @@
      character(len=255), pointer :: vname(:)  ! variable name (groupname::elemname::XXX)
      CHARACTER(LEN=255)          :: rcfilen = 'CARMAchem_Registry.rc'
      integer                     :: NBIN, NGROUP, NELEM, NSOLUTE, NGAS, NWAVE
-     REAL(kind=f), pointer       :: RMRAT(:)        =>null(), &
-                                    RMIN(:)         =>null(), &
-                                    RHOP(:)         =>null(), &
-                                    ESHAPE(:)       =>null(), &
-                                    FSCAV(:)        =>null()
-     INTEGER, pointer            :: IGROUP(:)       =>null(), &
-                                    IRHSWELL(:)     =>null(), &
-                                    IRHSWCOMP(:)    =>null(), &
-                                    ISHAPE(:)       =>null(), &
-                                    ICOMPOSITION(:) =>null(), &
-                                    ITYPE(:)        =>null()
-     character(len=255), pointer :: GROUPNAME(:)    =>null(), &
-                                    ELEMNAME(:)     =>null()
+     REAL(kind=f), pointer       :: RMRAT(:)          =>null(), &
+                                    RMIN(:)           =>null(), &
+                                    RHOP(:)           =>null(), &
+                                    ESHAPE(:)         =>null(), &
+                                    FSCAV(:)          =>null(), &
+                                    DISTRIBUTION(:,:) =>null()
+     INTEGER, pointer            :: IGROUP(:)         =>null(), &
+                                    IRHSWELL(:)       =>null(), &
+                                    IRHSWCOMP(:)      =>null(), &
+                                    ISHAPE(:)         =>null(), &
+                                    ICOMPOSITION(:)   =>null(), &
+                                    ITYPE(:)          =>null()
+     character(len=255), pointer :: GROUPNAME(:)      =>null(), &
+                                    ELEMNAME(:)       =>null()
 
 !    Gases
-     character(len=255), pointer :: GASNAME(:)      => null()
-     integer, pointer            :: IGCOMP(:)       => null(), &
-                                    IGVAPREQ(:)     => null()
+     character(len=255), pointer :: GASNAME(:)        => null()
+     integer, pointer            :: IGCOMP(:)         => null(), &
+                                    IGVAPREQ(:)       => null()
 
      logical :: do_cnst_rlh = .false.
      logical :: do_coag = .false.       !! do coagulation?
@@ -156,8 +157,8 @@
      integer :: ielm_dust  = -1         !! dust pc element
      integer :: igrp_seasalt  = -1      !! seasalt group
      integer :: ielm_seasalt  = -1      !! seasalt pc element
-     integer :: igrp_smoke  = -1        !! smoke group
-     integer :: ielm_smoke  = -1        !! smoke pc element
+     integer :: igrp_organic_carbon  = -1        !! organiccarbon group
+     integer :: ielm_organic_carbon  = -1        !! organiccarbon pc element
      integer :: igrp_black_carbon  = -1 !! black carbon group
      integer :: ielm_black_carbon  = -1 !! black carbon pc element
      integer :: igrp_ash  = -1          !! ash group
@@ -165,7 +166,7 @@
      integer :: ielm_mxpc     = -1      !! mixed group pc element
      integer :: ielm_mxsulfate= -1      !! mixed group sulfate core element
      integer :: ielm_mxdust   = -1      !! mixed group dust core element
-     integer :: ielm_mxsmoke  = -1      !! mixed group smoke core element
+     integer :: ielm_mxoc  = -1      !! mixed group organiccarbon core element
      integer :: ielm_mxseasalt= -1      !! mixed group seasalt core element
      integer :: ielm_mxbc     = -1      !! mixed group black carbon core element
      integer :: ielm_mxash    = -1      !! mixed group ash core element
@@ -181,7 +182,7 @@
 !    Sea Salt
      real               :: seasalt_emissions_fudgefactor
 
-!    Smoke
+!    Organic Carbon
      real               :: organic_matter_to_organic_carbon_ratio
      real               :: fraction_terpene_to_organic_carbon
 
@@ -196,7 +197,7 @@
      character(len=255) :: du_optics_file
      character(len=255) :: ss_optics_file
      character(len=255) :: bc_optics_file
-     character(len=255) :: sm_optics_file
+     character(len=255) :: oc_optics_file
      character(len=255) :: su_optics_file
 
 !    Workspace for any requested point emissions
@@ -448,11 +449,11 @@ CONTAINS
      reg%igrp_seasalt = j
      if(elemname == 'PC') reg%ielm_seasalt = i
     endif
-    if(groupname == 'SMOKE') then
-     reg%igrp_smoke = j
-     if(elemname == 'PC') reg%ielm_smoke = i
+    if(groupname == 'ORGANICCARBON') then
+     reg%igrp_organic_carbon = j
+     if(elemname == 'PC') reg%ielm_organic_carbon = i
     endif
-    if(groupname == 'BLACK_CARBON') then
+    if(groupname == 'BLACKCARBON') then
      reg%igrp_black_carbon = j
      if(elemname == 'PC') reg%ielm_black_carbon = i
     endif
@@ -467,9 +468,9 @@ CONTAINS
      if(elemname == 'SULFATE')      reg%ielm_mxsulfate = i
      if(elemname == 'DUST')         reg%ielm_mxdust    = i
      if(elemname == 'SEASALT')      reg%ielm_mxseasalt = i
-     if(elemname == 'SMOKE')        reg%ielm_mxsmoke   = i
+     if(elemname == 'ORGANICCARBON')        reg%ielm_mxoc   = i
      if(elemname == 'ASH')          reg%ielm_mxash     = i
-     if(elemname == 'BLACK_CARBON') reg%ielm_mxbc      = i
+     if(elemname == 'BLACKCARBON') reg%ielm_mxbc      = i
     endif
    end do
 
@@ -522,10 +523,10 @@ CONTAINS
       call CARMA_AddNucleation(r, reg%ielm_dust, reg%ielm_mxdust, &
                                I_HETNUCSULF, 0._f, rc, igas=reg%igas_h2so4, &
                                ievp2elem=reg%ielm_dust)
-     if(reg%ielm_smoke > 0 .and. reg%ielm_mxsmoke > 0) &
-      call CARMA_AddNucleation(r, reg%ielm_smoke, reg%ielm_mxsmoke, &
+     if(reg%ielm_organic_carbon > 0 .and. reg%ielm_mxoc > 0) &
+      call CARMA_AddNucleation(r, reg%ielm_organic_carbon, reg%ielm_mxoc, &
                                I_HETNUCSULF, 0._f, rc, igas=reg%igas_h2so4, &
-                               ievp2elem=reg%ielm_smoke)
+                               ievp2elem=reg%ielm_organic_carbon)
      if(reg%ielm_seasalt > 0 .and. reg%ielm_mxseasalt > 0) &
       call CARMA_AddNucleation(r, reg%ielm_seasalt, reg%ielm_mxseasalt, &
                                I_HETNUCSULF, 0._f, rc, igas=reg%igas_h2so4, &
@@ -540,7 +541,7 @@ CONTAINS
 
 !  Setup Coagulation
 !  --------------------
-!  We set up self coagulation for pure SULFATE and SMOKE groups.
+!  We set up self coagulation for pure SULFATE and ORGANICCARBON groups.
 !  If there is MIXEDP we allow coagulation of SULFATE with MIXEDP
    if(reg%do_coag) then
     do i = 1, reg%NELEM
@@ -557,7 +558,7 @@ CONTAINS
        call CARMA_AddCoagulation(r, j, reg%igrp_mixed, reg%igrp_mixed, I_COLLEC_FUCHS, rc )
       endif
      endif
-     if( groupname == 'SMOKE' ) call CARMA_AddCoagulation(r, j, j, j, I_COLLEC_FUCHS, rc )
+     if( groupname == 'ORGANICCARBON' ) call CARMA_AddCoagulation(r, j, j, j, I_COLLEC_FUCHS, rc )
      if(rc /=0) then
       call final_(rc)
       return
@@ -833,14 +834,14 @@ CONTAINS
                                       du_sarea, du_numd, du_reff, &
                                       ash_sarea, ash_numd, ash_reff, &
                                       ss_sarea, ss_numd, ss_reff, &
-                                      sm_sarea, sm_numd, sm_reff, &
+                                      oc_sarea, oc_numd, oc_reff, &
                                       mx_sarea, mx_numd, mx_reff, &
                                       su_mass, hno3, h2so4
    REAL, POINTER, DIMENSION(:,:)   :: gwettop, fraclake, oro, u10m, v10m, &
                                       ustar, pblh, z0h, shflux, precc, precl, &
                                       substeps, retries
-   real, pointer, dimension(:,:)   :: du_sed, su_sed, ss_sed, bc_sed, ash_sed, sm_sed, &
-                                      mxdu_sed, mxsu_sed, mxss_sed, mxbc_sed, mxash_sed, mxsm_sed
+   real, pointer, dimension(:,:)   :: du_sed, su_sed, ss_sed, bc_sed, ash_sed, oc_sed, &
+                                      mxdu_sed, mxsu_sed, mxss_sed, mxbc_sed, mxash_sed, mxoc_sed
    type(Chem_Array), pointer       :: suvf(:), mxvf(:)
 
 
@@ -1022,12 +1023,12 @@ CONTAINS
    call MAPL_GetPointer(expChem, ss_numd,   'CARMA_SSNUMD',   __RC__)
    call MAPL_GetPointer(expChem, ss_reff,   'CARMA_SSREFF',   __RC__)
    call MAPL_GetPointer(expChem, mxss_sed,  'CARMA_MXSSSD',   __RC__)
-!  Smoke
-   call MAPL_GetPointer(expChem, sm_sed,    'CARMA_SMSD',   __RC__)
-   call MAPL_GetPointer(expChem, sm_sarea,  'CARMA_SMSAREA',  __RC__)
-   call MAPL_GetPointer(expChem, sm_numd,   'CARMA_SMNUMD',   __RC__)
-   call MAPL_GetPointer(expChem, sm_reff,   'CARMA_SMREFF',   __RC__)
-   call MAPL_GetPointer(expChem, mxsm_sed,  'CARMA_MXSMSD',   __RC__)
+!  Organic carbon
+   call MAPL_GetPointer(expChem, oc_sed,    'CARMA_OCSD',   __RC__)
+   call MAPL_GetPointer(expChem, oc_sarea,  'CARMA_OCSAREA',  __RC__)
+   call MAPL_GetPointer(expChem, oc_numd,   'CARMA_OCNUMD',   __RC__)
+   call MAPL_GetPointer(expChem, oc_reff,   'CARMA_OCREFF',   __RC__)
+   call MAPL_GetPointer(expChem, mxoc_sed,  'CARMA_MXOCSD',   __RC__)
 !  Other
    call MAPL_GetPointer(expChem, bc_sed,    'CARMA_BCSD',   __RC__)
    call MAPL_GetPointer(expChem, mxbc_sed,  'CARMA_MXBCSD',   __RC__)
@@ -1123,11 +1124,11 @@ endif
    if( associated(SU_sed))    SU_sed(:,:) = 0.
    if( associated(SS_sed))    SS_sed(:,:) = 0.
    if( associated(BC_sed))    BC_sed(:,:) = 0.
-   if( associated(SM_sed))    SM_sed(:,:) = 0.
+   if( associated(OC_sed))    OC_sed(:,:) = 0.
    if( associated(ASH_sed))   ASH_sed(:,:) = 0.
    if( associated(MXDU_sed))  MXDU_sed(:,:) = 0.
    if( associated(MXSU_sed))  MXSU_sed(:,:) = 0.
-   if( associated(MXSM_sed))  MXSM_sed(:,:) = 0.
+   if( associated(MXOC_sed))  MXOC_sed(:,:) = 0.
    if( associated(MXSS_sed))  MXSS_sed(:,:) = 0.
    if( associated(MXBC_sed))  MXBC_sed(:,:) = 0.
    if( associated(MXASH_sed)) MXASH_sed(:,:) = 0.
@@ -1140,9 +1141,9 @@ endif
    if( associated(SS_sarea))  SS_sarea(:,:,:) = 0.
    if( associated(SS_numd))   SS_numd(:,:,:) = 0.
    if( associated(SS_reff))   SS_reff(:,:,:) = 0.
-   if( associated(SM_sarea))  SM_sarea(:,:,:) = 0.
-   if( associated(SM_numd))   SM_numd(:,:,:) = 0.
-   if( associated(SM_reff))   SM_reff(:,:,:) = 0.
+   if( associated(OC_sarea))  OC_sarea(:,:,:) = 0.
+   if( associated(OC_numd))   OC_numd(:,:,:) = 0.
+   if( associated(OC_reff))   OC_reff(:,:,:) = 0.
    if( associated(SU_nuc))    SU_nuc(:,:,:) = 0. 
    if( associated(substeps))  substeps(:,:)    = 0.
    if( associated(retries))   retries(:,:)     = 0.
@@ -1284,7 +1285,7 @@ endif
                               q_, rc, sedimentationflux=dq_)
        if(associated(DU_sed)  .and. igroup .eq. reg%igrp_dust)         DU_sed(i,j) = DU_sed(i,j) + dq_
        if(associated(SS_sed)  .and. igroup .eq. reg%igrp_seasalt)      SS_sed(i,j) = SS_sed(i,j) + dq_
-       if(associated(SM_sed)  .and. igroup .eq. reg%igrp_smoke)        SM_sed(i,j) = SM_sed(i,j) + dq_
+       if(associated(OC_sed)  .and. igroup .eq. reg%igrp_organic_carbon)        OC_sed(i,j) = OC_sed(i,j) + dq_
        if(associated(SU_sed)  .and. igroup .eq. reg%igrp_sulfate)      SU_sed(i,j) = SU_sed(i,j) + dq_
        if(associated(BC_sed)  .and. igroup .eq. reg%igrp_black_carbon) BC_sed(i,j) = BC_sed(i,j) + dq_
        if(associated(ASH_sed) .and. igroup .eq. reg%igrp_ash)          ASH_sed(i,j) = ASH_sed(i,j) + dq_
@@ -1292,13 +1293,13 @@ endif
        if(igroup .eq. reg%igrp_mixed) then
         if(associated(MXDU_sed) .and. ielem .eq. reg%ielm_mxdust)      MXDU_sed(i,j) = MXDU_sed(i,j) + dq_
         if(associated(MXSS_sed) .and. ielem .eq. reg%ielm_mxseasalt)   MXSS_sed(i,j) = MXSS_sed(i,j) + dq_
-        if(associated(MXSM_sed) .and. ielem .eq. reg%ielm_mxsmoke)     MXSM_sed(i,j) = MXSM_sed(i,j) + dq_
+        if(associated(MXOC_sed) .and. ielem .eq. reg%ielm_mxoc)     MXOC_sed(i,j) = MXOC_sed(i,j) + dq_
         if(associated(MXSU_sed) .and. ielem .eq. reg%ielm_mxsulfate)   MXSU_sed(i,j) = MXSU_sed(i,j) + dq_
         if(associated(MXBC_sed) .and. ielem .eq. reg%ielm_mxbc)        MXBC_sed(i,j) = MXBC_sed(i,j) + dq_
         if(associated(MXASH_sed) .and. ielem .eq. reg%ielm_mxash)      MXASH_sed(i,j) = MXASH_sed(i,j) + dq_
 !       subtract cores
         if(associated(MXSU_sed) .and. ielem .eq. reg%ielm_mxdust)      MXSU_sed(i,j) = MXSU_sed(i,j) - dq_
-        if(associated(MXSU_sed) .and. ielem .eq. reg%ielm_mxsmoke)     MXSU_sed(i,j) = MXSU_sed(i,j) - dq_
+        if(associated(MXSU_sed) .and. ielem .eq. reg%ielm_mxoc)     MXSU_sed(i,j) = MXSU_sed(i,j) - dq_
         if(associated(MXSU_sed) .and. ielem .eq. reg%ielm_mxseasalt)   MXSU_sed(i,j) = MXSU_sed(i,j) - dq_
         if(associated(MXSU_sed) .and. ielem .eq. reg%ielm_mxbc)        MXSU_sed(i,j) = MXSU_sed(i,j) - dq_
         if(associated(MXSU_sed) .and. ielem .eq. reg%ielm_mxash)       MXSU_sed(i,j) = MXSU_sed(i,j) - dq_
@@ -1361,15 +1362,15 @@ endif
         if(associated(DU_numd)  .and. igroup .eq. reg%igrp_dust)    DU_numd(i,j,:)  = DU_numd(i,j,:)  + numd_
         if(associated(ASH_sarea) .and. igroup .eq. reg%igrp_ash)    ASH_sarea(i,j,:) = ASH_sarea(i,j,:) + sarea_
         if(associated(ASH_numd)  .and. igroup .eq. reg%igrp_ash)    ASH_numd(i,j,:)  = ASH_numd(i,j,:)  + numd_
-        if(associated(SM_sarea) .and. igroup .eq. reg%igrp_smoke)   SM_sarea(i,j,:) = SM_sarea(i,j,:) + sarea_
-        if(associated(SM_numd)  .and. igroup .eq. reg%igrp_smoke)   SM_numd(i,j,:)  = SM_numd(i,j,:)  + numd_
+        if(associated(OC_sarea) .and. igroup .eq. reg%igrp_organic_carbon)   OC_sarea(i,j,:) = OC_sarea(i,j,:) + sarea_
+        if(associated(OC_numd)  .and. igroup .eq. reg%igrp_organic_carbon)   OC_numd(i,j,:)  = OC_numd(i,j,:)  + numd_
         if(associated(SS_sarea) .and. igroup .eq. reg%igrp_seasalt) SS_sarea(i,j,:) = SS_sarea(i,j,:) + sarea_
         if(associated(SS_numd)  .and. igroup .eq. reg%igrp_seasalt) SS_numd(i,j,:)  = SS_numd(i,j,:)  + numd_
         reff_num = reff_num + r_wet_**3.*numd_
         reff_den = reff_den + r_wet_**2.*numd_
       enddo
       if(associated(MX_reff) .and. igroup .eq. reg%igrp_mixed)      where(reff_den > 0) MX_reff(i,j,:) = reff_num / reff_den
-      if(associated(SM_reff) .and. igroup .eq. reg%igrp_smoke)      where(reff_den > 0) SM_reff(i,j,:) = reff_num / reff_den
+      if(associated(OC_reff) .and. igroup .eq. reg%igrp_organic_carbon)      where(reff_den > 0) OC_reff(i,j,:) = reff_num / reff_den
       if(associated(DU_reff) .and. igroup .eq. reg%igrp_dust)       where(reff_den > 0) DU_reff(i,j,:) = reff_num / reff_den
       if(associated(ASH_reff) .and. igroup .eq. reg%igrp_ash)       where(reff_den > 0) ASH_reff(i,j,:) = reff_num / reff_den
       if(associated(SU_reff) .and. igroup .eq. reg%igrp_sulfate)    where(reff_den > 0) SU_reff(i,j,:) = reff_num / reff_den

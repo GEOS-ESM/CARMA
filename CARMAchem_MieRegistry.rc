@@ -231,36 +231,56 @@ variable_table_BC::
 
 # Name     Units        Long Name
 # -----    ------       --------------------------------
-BCphobic   "kg kg-1"    Hydrophobic Black Carbon 
-BCphilic   "kg kg-1"    Hydrophilic Black Carbon
+blackcarbon::pc::001   kg/kg    blackcarbon 001
+blackcarbon::pc::002   kg/kg    blackcarbon 002
+blackcarbon::pc::003   kg/kg    blackcarbon 003
+blackcarbon::pc::004   kg/kg    blackcarbon 004
+blackcarbon::pc::005   kg/kg    blackcarbon 005
+blackcarbon::pc::006   kg/kg    blackcarbon 006
+blackcarbon::pc::007   kg/kg    blackcarbon 007
+blackcarbon::pc::008   kg/kg    blackcarbon 008
+blackcarbon::pc::009   kg/kg    blackcarbon 009
+blackcarbon::pc::010   kg/kg    blackcarbon 010
+blackcarbon::pc::011   kg/kg    blackcarbon 011
+blackcarbon::pc::012   kg/kg    blackcarbon 012
+blackcarbon::pc::013   kg/kg    blackcarbon 013
+blackcarbon::pc::014   kg/kg    blackcarbon 014
+blackcarbon::pc::015   kg/kg    blackcarbon 015
+blackcarbon::pc::016   kg/kg    blackcarbon 016
+blackcarbon::pc::017   kg/kg    blackcarbon 017
+blackcarbon::pc::018   kg/kg    blackcarbon 018
+blackcarbon::pc::019   kg/kg    blackcarbon 019
+blackcarbon::pc::020   kg/kg    blackcarbon 020
+blackcarbon::pc::021   kg/kg    blackcarbon 021
+blackcarbon::pc::022   kg/kg    blackcarbon 022
 ::
 
 variable_table_OC::
 
 # Name     Units        Long Name
 # -----    ------       --------------------------------
-smoke::pc::001   kg/kg    smoke 001
-smoke::pc::002   kg/kg    smoke 002
-smoke::pc::003   kg/kg    smoke 003
-smoke::pc::004   kg/kg    smoke 004
-smoke::pc::005   kg/kg    smoke 005
-smoke::pc::006   kg/kg    smoke 006
-smoke::pc::007   kg/kg    smoke 007
-smoke::pc::008   kg/kg    smoke 008
-smoke::pc::009   kg/kg    smoke 009
-smoke::pc::010   kg/kg    smoke 010
-smoke::pc::011   kg/kg    smoke 011
-smoke::pc::012   kg/kg    smoke 012
-smoke::pc::013   kg/kg    smoke 013
-smoke::pc::014   kg/kg    smoke 014
-smoke::pc::015   kg/kg    smoke 015
-smoke::pc::016   kg/kg    smoke 016
-smoke::pc::017   kg/kg    smoke 017
-smoke::pc::018   kg/kg    smoke 018
-smoke::pc::019   kg/kg    smoke 019
-smoke::pc::020   kg/kg    smoke 020
-smoke::pc::021   kg/kg    smoke 021
-smoke::pc::022   kg/kg    smoke 022
+organiccarbon::pc::001   kg/kg    organiccarbon 001
+organiccarbon::pc::002   kg/kg    organiccarbon 002
+organiccarbon::pc::003   kg/kg    organiccarbon 003
+organiccarbon::pc::004   kg/kg    organiccarbon 004
+organiccarbon::pc::005   kg/kg    organiccarbon 005
+organiccarbon::pc::006   kg/kg    organiccarbon 006
+organiccarbon::pc::007   kg/kg    organiccarbon 007
+organiccarbon::pc::008   kg/kg    organiccarbon 008
+organiccarbon::pc::009   kg/kg    organiccarbon 009
+organiccarbon::pc::010   kg/kg    organiccarbon 010
+organiccarbon::pc::011   kg/kg    organiccarbon 011
+organiccarbon::pc::012   kg/kg    organiccarbon 012
+organiccarbon::pc::013   kg/kg    organiccarbon 013
+organiccarbon::pc::014   kg/kg    organiccarbon 014
+organiccarbon::pc::015   kg/kg    organiccarbon 015
+organiccarbon::pc::016   kg/kg    organiccarbon 016
+organiccarbon::pc::017   kg/kg    organiccarbon 017
+organiccarbon::pc::018   kg/kg    organiccarbon 018
+organiccarbon::pc::019   kg/kg    organiccarbon 019
+organiccarbon::pc::020   kg/kg    organiccarbon 020
+organiccarbon::pc::021   kg/kg    organiccarbon 021
+organiccarbon::pc::022   kg/kg    organiccarbon 022
 ::
 
 variable_table_RN::
