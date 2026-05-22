@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 ### Fixed
+- There was a bug with line lengths in reading distributions from the Registry. Addressed
+  by shortening the default length of the line. Also introduced some change in the 
+  reporting and error handling for reading the distributions.
 
 ### Removed
 
