@@ -1393,9 +1393,9 @@ CONTAINS
     write(elem_str, '(i0)') i
     call i90_label ( 'DISTRIBUTION'//elem_str//':', ier(1) )
     do j = 1, r%NBIN
-     r%distribution(i,j) = i90_gfloat(ier(i+1))
+     r%distribution(i,j) = i90_gfloat(ier(j+1))
     end do
-    if(any(ier(1:r%NELEM+1) /= 0)) then
+    if(any(ier(1:r%NBIN+1) /= 0)) then
      call final_(101)
      return
     endif
