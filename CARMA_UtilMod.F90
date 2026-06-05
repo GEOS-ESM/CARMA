@@ -239,7 +239,7 @@ CONTAINS
 
    allocate(emissions(i1:i2,j1:j2), memissions(i1:i2,j1:j2), &
             nemissions(i1:i2,j1:j2), w10m(i1:i2,j1:j2), dqa(i1:i2,j1:j2), stat=STATUS)
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
 
 !  Get Imports
 !  -----------
@@ -691,7 +691,7 @@ CONTAINS
    endif
 
    deallocate(emissions, memissions, nemissions, dqa, w10m, stat=STATUS)
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
 
 
   RETURN
@@ -789,9 +789,9 @@ CONTAINS
    n2 =  gcCARMA%CARMAreg%nq
 
    allocate(drydepositionfrequency(i1:i2,j1:j2), dqa(i1:i2,j1:j2), stat=STATUS)
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
    allocate(radius_cgs(reg%NBIN), rhop_cgs(reg%NBIN),stat=STATUS)
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
 
 !  Get Imports
 !  -----------
@@ -910,7 +910,7 @@ CONTAINS
    enddo   ! NELEM
 
    deallocate(radius_cgs, rhop_cgs, drydepositionfrequency, dqa, stat=STATUS)
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
 
 
   RETURN
@@ -1014,9 +1014,9 @@ CONTAINS
    n2 =  reg%nq
 
    allocate(wetremovalflux, stat=STATUS)
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
    allocate(wetremovalflux%data2d(i1:i2,j1:j2), stat=STATUS)
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
    wetremovalflux%data2d = 0.
 
 
@@ -1134,9 +1134,9 @@ CONTAINS
    enddo   ! NELEM
 
    deallocate(wetremovalflux%data2d, stat=STATUS)
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
    deallocate(wetremovalflux, stat=STATUS)
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
 
 
   RETURN
@@ -1976,7 +1976,7 @@ CONTAINS
    if(do_angstrom) then
     allocate(tau470(i1:i2,j1:j2), tottau470(i1:i2,j1:j2), &
              tau870(i1:i2,j1:j2), tottau870(i1:i2,j1:j2), stat=STATUS)
-    VERIFY_(STATUS)
+    _VERIFY(STATUS)
     tau470(i1:i2,j1:j2) = tiny(1.0)
     tau870(i1:i2,j1:j2) = tiny(1.0)
     tottau470(i1:i2,j1:j2) = tiny(1.0)
@@ -2431,7 +2431,7 @@ CONTAINS
 
    if(do_angstrom) then
     deallocate(tau470, tottau470, tau870, tottau870, stat=STATUS)
-    VERIFY_(STATUS)
+    _VERIFY(STATUS)
    endif
 
 
@@ -2482,7 +2482,7 @@ CONTAINS
 
    reg => gcCARMA%CARMAreg
    allocate( gcCARMA%CARMAmie, stat=STATUS)
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
    mie => gcCARMA%CARMAmie
    
    mie%nq = reg%nq
@@ -2499,7 +2499,7 @@ CONTAINS
    mie%nch      = reg%nchannels
    mie%nmom     = reg%nmoments
    allocate( mie%channels(mie%nch), stat=STATUS)
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
    mie%channels = reg%channels
 
    mie%du_optics_file = reg%du_optics_file

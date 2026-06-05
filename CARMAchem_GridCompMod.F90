@@ -125,27 +125,27 @@ CONTAINS
 !   Get my name and set-up traceback handle
 !   ---------------------------------------
     call ESMF_GridCompGet( GC, NAME=COMP_NAME, RC=STATUS )
-    VERIFY_(STATUS)
+    _VERIFY(STATUS)
     Iam = TRIM(COMP_NAME) // '::' // TRIM(Iam)
 
 !   Wrap internal state for storing in GC; rename legacyState
 !   -------------------------------------
     allocate ( state, stat=STATUS )
-    VERIFY_(STATUS)
+    _VERIFY(STATUS)
     wrap%ptr => state
  
 !   Start by loading the CARMA Registry
 !   -----------------------------------
     allocate ( state%CARMAReg )
     call registry_ ( state%CARMAReg )
-    VERIFY_(STATUS)
+    _VERIFY(STATUS)
     call registry_print_ ( state%CARMAReg )
 
 !   Start by loading the Chem Registry
 !   ----------------------------------
     allocate ( state%chemReg )
     state%chemReg = Chem_RegistryCreate ( STATUS )
-    VERIFY_(STATUS)
+    _VERIFY(STATUS)
 
 
     r => state%CARMAReg   ! short hand
@@ -162,20 +162,20 @@ CONTAINS
 
         call MAPL_GridCompSetEntryPoint ( GC, ESMF_METHOD_INITIALIZE,  Initialize_, &
              RC=STATUS)
-        VERIFY_(STATUS)
+        _VERIFY(STATUS)
         
         call MAPL_GridCompSetEntryPoint ( GC,  ESMF_METHOD_RUN,  Run_,        &
              RC=STATUS)
-        VERIFY_(STATUS)
+        _VERIFY(STATUS)
         
         call MAPL_GridCompSetEntryPoint ( GC,  ESMF_METHOD_FINALIZE,  Finalize_,  &
              RC=STATUS)
-        VERIFY_(STATUS)
+        _VERIFY(STATUS)
         
 !       Store internal state in GC
 !       --------------------------
         call ESMF_UserCompSetInternalState ( GC, 'CARMA_state', wrap, STATUS )
-        VERIFY_(STATUS)
+        _VERIFY(STATUS)
 
      else
 
@@ -231,7 +231,7 @@ CONTAINS
                FRIENDLYTO  = 'DYNAMICS:TURBULENCE',          &
                DIMS        = MAPL_DimsHorzVert,                    &
                VLOCATION   = MAPL_VLocationCenter,     RC=STATUS  )
-          VERIFY_(STATUS)
+          _VERIFY(STATUS)
 
        end do
       end do
@@ -251,7 +251,7 @@ CONTAINS
                FRIENDLYTO  = 'DYNAMICS:TURBULENCE',                &
                DIMS        = MAPL_DimsHorzVert,                    &
                VLOCATION   = MAPL_VLocationCenter,     RC=STATUS  )
-          VERIFY_(STATUS)
+          _VERIFY(STATUS)
 
       end do
 
@@ -269,7 +269,7 @@ CONTAINS
              ADD2EXPORT      = .TRUE.,                           &
              DIMS        = MAPL_DimsHorzVert,                    &
              VLOCATION   = MAPL_VLocationCenter,     RC=STATUS  )
-      VERIFY_(STATUS)
+      _VERIFY(STATUS)
 
 
 !     Add the prior time step gas tracers
@@ -288,7 +288,7 @@ CONTAINS
                ADD2EXPORT      = .TRUE.,                           &
                DIMS        = MAPL_DimsHorzVert,                    &
                VLOCATION   = MAPL_VLocationCenter,     RC=STATUS  )
-          VERIFY_(STATUS)
+          _VERIFY(STATUS)
 
       end do
        
@@ -306,7 +306,7 @@ CONTAINS
                ADD2EXPORT      = .TRUE.,                           &
                DIMS        = MAPL_DimsHorzVert,                    &
                VLOCATION   = MAPL_VLocationCenter,     RC=STATUS  )
-          VERIFY_(STATUS)
+          _VERIFY(STATUS)
 
       end do
        
@@ -325,7 +325,7 @@ CONTAINS
                ADD2EXPORT      = .TRUE.,                           &
                DIMS        = MAPL_DimsHorzVert,                    &
                VLOCATION   = MAPL_VLocationCenter,     RC=STATUS  )
-          VERIFY_(STATUS)
+          _VERIFY(STATUS)
 
       end do
       endif  ! NGAS > 0
@@ -345,7 +345,7 @@ CONTAINS
         VLOCATION          = MAPL_VLocationCenter,                &
         DATATYPE           = MAPL_StateItem,                      &
                                                        RC=STATUS  )
-    VERIFY_(STATUS)
+    _VERIFY(STATUS)
 
 !   This state is needed by MOIST - It will contain aerosols
 !   This bundle is not currently filled in by CARMA, just a 
@@ -371,7 +371,7 @@ CONTAINS
         DIMS               = MAPL_DimsHorzOnly,                   &
         DATATYPE           = MAPL_BundleItem,                     &
                                                        RC=STATUS  )
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
 
 !
 #include "CARMA_ExportSpec___.h"
@@ -380,21 +380,21 @@ CONTAINS
 !   Set the profiling timers
 !   ------------------------
     CALL MAPL_TimerAdd(GC, NAME="INITIALIZE", RC=STATUS)
-    VERIFY_(STATUS)
+    _VERIFY(STATUS)
     CALL MAPL_TimerAdd(GC, NAME="RUN", RC=STATUS)
-    VERIFY_(STATUS)
+    _VERIFY(STATUS)
     CALL MAPL_TimerAdd(GC, NAME="FINALIZE", RC=STATUS)
-    VERIFY_(STATUS)
+    _VERIFY(STATUS)
 
 !   Generic Set Services
 !   --------------------
     call MAPL_GenericSetServices ( GC, RC=STATUS )
-    VERIFY_(STATUS)
+    _VERIFY(STATUS)
 
 !   All done
 !   --------
 
-    RETURN_(ESMF_SUCCESS)
+    _RETURN(ESMF_SUCCESS)
 
   END SUBROUTINE SetServices
 
@@ -507,7 +507,7 @@ CONTAINS
 !  Get parameters from gc and clock
 !  --------------------------------
    call extract_ ( gc, clock, gcCARMA, qa, nymd, nhms, cdt, STATUS )
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
 
 !  Get the grid
 !  ------------
@@ -594,7 +594,7 @@ CONTAINS
 !   ---------------
     call CARMA_GridCompInitialize ( gcCARMA, import, export, nymd, nhms, cdt, &
                                     STATUS )
-    VERIFY_(STATUS)
+    _VERIFY(STATUS)
 
 #ifdef PRINT_STATES
 
@@ -637,7 +637,7 @@ CONTAINS
     call CARMA_GetMieTables(gcCARMA, rc)
     if(rc /= 0) then
      if(MAPL_AM_I_ROOT()) print *, 'CARMA: Failed reading Mie tables'
-     RETURN_(ESMF_FAILURE)
+     _RETURN(ESMF_FAILURE)
     endif
 
 !   Fill the AERO bundle - For now we add all concentration elements
@@ -680,12 +680,12 @@ CONTAINS
         carmaCF = ESMF_ConfigCreate(__RC__)
         call ESMF_ConfigLoadFile(carmaCF,'CARMAchem_Registry.rc', __RC__)
         allocate(mieReg, stat=STATUS)
-        VERIFY_(STATUS)
+        _VERIFY(STATUS)
         mieReg = Chem_RegistryCreate(rc,rcfile='CARMAchem_MieRegistry.rc')
         if ( rc /= 0 ) call die('CARMA', 'Cannot read CARMAchem_MieRegistry.rc' )
         carmaMieTable(instance) = Chem_MieCreate(carmaCF, chemReg=mieReg, __RC__)
         deallocate(mieReg,stat=STATUS)
-        VERIFY_(STATUS)
+        _VERIFY(STATUS)
         call ESMF_ConfigDestroy(carmaCF, __RC__)
 
         ! Mie Table instance/index
@@ -767,7 +767,7 @@ CONTAINS
    CALL MAPL_TimerOff(ggState, "TOTAL")
 
 
-    RETURN_(ESMF_SUCCESS)
+    _RETURN(ESMF_SUCCESS)
 
    END SUBROUTINE Initialize_
 
@@ -865,38 +865,38 @@ CONTAINS
 !  Get parameters from gc and clock
 !  --------------------------------
    call extract_ ( gc, clock, gcCARMA, qa, nymd, nhms, cdt, STATUS )
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
 
 !  Run
 !  ---
    call CARMA_Emissions  ( gcCARMA, qa, import, export, nymd, nhms, &
                            cdt, STATUS )
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
 
    call CARMA_GridCompRun ( gcCARMA, qa, import, export, nymd, nhms, &
                             cdt, STATUS )
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
 
    call CARMA_DryDeposition  ( gcCARMA, qa, import, export, nymd, nhms, &
                                cdt, STATUS )
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
 
    call CARMA_WetRemoval  ( gcCARMA, qa, import, export, nymd, nhms, &
                             cdt, STATUS )
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
 
    call CARMA_Convection  ( gcCARMA, qa, import, export, nymd, nhms, &
                             cdt, STATUS )
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
 
    call CARMA_ComputeDiags  ( gcCARMA, qa, import, export, nymd, nhms, &
                               cdt, STATUS )
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
 
    CALL MAPL_TimerOff(ggState, "RUN")
    CALL MAPL_TimerOff(ggState, "TOTAL")
 
-   RETURN_(ESMF_SUCCESS)
+   _RETURN(ESMF_SUCCESS)
 
    END SUBROUTINE Run_
 
@@ -957,7 +957,7 @@ CONTAINS
 !  Get my name and set-up traceback handle
 !  ---------------------------------------
    call ESMF_GridCompGet( GC, NAME=COMP_NAME, RC=STATUS )
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
    Iam = trim(COMP_NAME) // 'Finalize_'
 
 !  Get my internal MAPL_Generic state
@@ -973,13 +973,13 @@ CONTAINS
 !  -------------------------------------
    call extract_ ( gc, clock, gcCARMA, qa, nymd, nhms, cdt, STATUS, &
                    state = state )
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
 
 !  Call ESMF version
 !  -----------------
    call CARMA_GridCompFinalize ( gcCARMA, import, export, &
                                  nymd, nhms, cdt, STATUS )
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
 
 !  Destroy Mie Tables
 !  ------------------
@@ -997,7 +997,7 @@ CONTAINS
 !  --------------------
    call registry_destroy_ (state%CARMAreg)
    deallocate ( state%CARMAreg, state%qa, state%gcCARMA, state%chemReg, __STAT__)
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
 
 !  Stop timers
 !  -----------
@@ -1007,9 +1007,9 @@ CONTAINS
 !  Finalize MAPL Generic.  Atanas says, "Do not deallocate foreign objects."
 !  -------------------------------------------------------------------------
    call MAPL_GenericFinalize ( gc, import, export, clock,  RC=STATUS )
-   VERIFY_(STATUS)
+   _VERIFY(STATUS)
 
-   RETURN_(ESMF_SUCCESS)
+   _RETURN(ESMF_SUCCESS)
 
    END SUBROUTINE Finalize_
 
@@ -1061,7 +1061,7 @@ CONTAINS
 !   Get my internal state
 !   ---------------------
     call ESMF_UserCompGetInternalState(gc, 'CARMA_state', WRAP, STATUS)
-    VERIFY_(STATUS)
+    _VERIFY(STATUS)
     myState => wrap%ptr
     if ( present(state) ) then
          state => wrap%ptr
@@ -1069,17 +1069,17 @@ CONTAINS
 
     if ( .not. associated(myState%gcCARMA) ) then
          allocate ( myState%gcCARMA, stat=STATUS )
-         VERIFY_(STATUS)
+         _VERIFY(STATUS)
     end if
 
     if ( .not. associated(myState%CARMAreg) ) then
          allocate ( myState%CARMAreg, stat=STATUS )
-         VERIFY_(STATUS)
+         _VERIFY(STATUS)
     end if
 
     if ( .not. associated(myState%qa) ) then
          allocate ( myState%qa(myState%CARMAreg%nq), stat=STATUS )
-         VERIFY_(STATUS)
+         _VERIFY(STATUS)
     end if
 
     gcCARMA => myState%gcCARMA
@@ -1099,7 +1099,7 @@ CONTAINS
     cdt = real(dt_r8)
 
     call ESMF_ClockGet(CLOCK,currTIME=TIME,rc=STATUS)
-    VERIFY_(STATUS)
+    _VERIFY(STATUS)
 
 !   Need code to extract nymd(20050205), nhms(120000) from clock
 !   ------------------------------------------
@@ -1109,7 +1109,7 @@ CONTAINS
     call MAPL_PackTime(NYMD,IYR,IMM,IDD)
     call MAPL_PackTime(NHMS,IHR,IMN,ISC)
 
-    RETURN_(ESMF_SUCCESS)
+    _RETURN(ESMF_SUCCESS)
 
    end subroutine extract_
 
@@ -1872,7 +1872,7 @@ subroutine run_aerosol_optics(state, rc)
 
   deallocate(aerosol_names, ext, ssa, asy, q_4d, __STAT__)
 
-  RETURN_(ESMF_SUCCESS)
+  _RETURN(ESMF_SUCCESS)
 
 contains 
 
@@ -1925,7 +1925,7 @@ contains
      ssa = ssa_
      asy = asy_
 
-     RETURN_(ESMF_SUCCESS)
+     _RETURN(ESMF_SUCCESS)
 
     end subroutine mie_
 
