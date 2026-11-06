@@ -1,14 +1,14 @@
 # CARMA decisions
 
 **Audience:** coding agents and developers working on the `CARMA` repository.
-**Describes:** the MAPL2 line, branch `develop`.
-**Verified against:** `CARMA` @ `75870b0` (2026-11-06).
-**Placement:** as in the GEOSgcm fixture (`components.yaml` @ `0f2e0fb`).
+**Describes:** the MAPL3 line, branch `release/MAPL-v3`.
+**Verified against:** `CARMA` @ `3aa46b6` (2026-11-06).
+**Placement:** as in the GEOSgcm fixture (`components.yaml` @ `f50622d`).
 Other fixtures (for example GEOSadas, GEOSldas) may place this repository
 elsewhere; paths inside this repository do not change.
 
 ### Tracers declared from the registry at SetServices
-- Pattern: the number and names of internal-state tracers come from `CARMAchem_Registry.rc`, read in SetServices; with no spec rows in `CARMAchem_StateSpecs.rc` `INTERNAL` (`CARMAchem_GridCompMod.F90`, SetServices, `registry_`; `CARMAchem_StateSpecs.rc`, `category: INTERNAL`).
+- Pattern: the number and names of internal-state tracers come from `CARMAchem_Registry.rc`, read in SetServices; with no rows in the `<InternalSpec>` block (`CARMAchem_GridCompMod.F90`, SetServices, `registry_`; `CARMAchem_Registry.rc`, empty `<InternalSpec>` block).
 - Likely reason: bins, groups, elements and gases are experiment choices, so the field list cannot be fixed at build time.
 - Question for maintainers: none.
 
@@ -17,13 +17,13 @@ elsewhere; paths inside this repository do not change.
 - Likely reason: let the parent add the child unconditionally in configurations without a working registry. *Inferred.*
 
 ### Optics through the `AERO` state with Mie tables owned by this module
-- Pattern: `AERO` carries attributes and fields for optics and activation, the method `run_aerosol_optics` runs `mie_` against a module-level table `carmaMieTable`, and `aerosol_activation_properties` is attached for cloud microphysics (`CARMAchem_GridCompMod.F90`, Initialize_, `run_aerosol_optics`).
-- Likely reason: radiation and moist code consume any provider's `AERO` through the same interface (parent document, section 3). *Inferred.*
+- Pattern: `AERO` carries attributes and fields for optics and activation, the method `run_aerosol_optics` runs `mie_` against a module-level table `carmaMieTable` (`CARMAchem_GridCompMod.F90`, Initialize_, `run_aerosol_optics`). On this line no activation-properties method is attached.
+- Likely reason: radiation and moist code consume any provider's `AERO` through the same interface (see the parent's documents; on this line they are not written yet, the MAPL2-line versions are on its `develop` branch). *Inferred.*
 
 ### Two sources for sulfuric acid and nitric acid gas
 - Pattern: `SULFURIC_ACID_SOURCE` selects `tendency` (add chemical production `CARMA_PSO4TOT*dt`) or `full_field` (use and return GMI's `CARMA_H2SO4` and `CARMA_HNO3`) (`CARMA_UtilMod.F90`, `CARMA_Emissions`; `CARMA_GridComp.F90`, CARMA_GridCompRun; `CARMAchem_GridCompMod.F90`, Initialize_).
 - Likely reason: CARMA can run alone with GOCART-2G sulfate production or coupled to GMI chemistry. *Inferred.*
-- Question for maintainers: the parent sets the key (parent document, section on shared config); why is the default `tendency`?
+- Question for maintainers: the parent sets the key (see the parent's documents); why is the default `tendency`?
 
 ### Upstream library embedded as a plain directory
 - Pattern: `CARMA/` is a copy of the upstream distribution (own `README`, `Makefile`, tests) inside this repository; only `CARMA/source/base` is compiled (`CMakeLists.txt`, `src_directories`).
