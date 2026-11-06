@@ -9,7 +9,7 @@ Other fixtures (for example GEOSadas, GEOSldas) may place this repository
 elsewhere; paths inside this repository do not change.
 
 ## What this repository is
-The GEOS interface to CARMA (Community Aerosol and Radiation Model for Atmospheres), a bin microphysics model for aerosols and clouds. One MAPL gridded component (`CARMAchem_GridCompMod`) wraps the upstream library embedded in `CARMA/`. It is a child of the Chemistry repository (`GEOSchem_GridComp`, [AGENTS.md](../AGENTS.md), [architecture](../docs/ARCHITECTURE.md)), which adds it when `ENABLE_CARMA` is true and makes its connections.
+The GEOS interface to CARMA (Community Aerosol and Radiation Model for Atmospheres), a bin microphysics model for aerosols and clouds. One MAPL gridded component (`CARMAchem_GridCompMod`) wraps the upstream library embedded in `CARMA/`. It is a child of the Chemistry repository (`GEOSchem_GridComp`, AGENTS.md (`../AGENTS.md` in the fixture), architecture (`../docs/ARCHITECTURE.md` in the fixture)), which adds it when `ENABLE_CARMA` is true and makes its connections.
 
 ## Documents
 | File | Content |
