@@ -18,7 +18,7 @@ elsewhere; paths inside this repository do not change.
 
 ### Optics through the `AERO` state with Mie tables owned by this module
 - Pattern: `AERO` carries attributes and fields for optics and activation, the method `run_aerosol_optics` runs `mie_` against a module-level table `carmaMieTable` (`CARMAchem_GridCompMod.F90`, Initialize_, `run_aerosol_optics`). On this line no activation-properties method is attached.
-- Likely reason: radiation and moist code consume any provider's `AERO` through the same interface (see the parent's documents; on this line they are not written yet, the MAPL2-line versions are on its `develop` branch). *Inferred.*
+- Likely reason: radiation and moist code consume any provider's `AERO` through the same interface (see the parent's documents). *Inferred.*
 
 ### Two sources for sulfuric acid and nitric acid gas
 - Pattern: `SULFURIC_ACID_SOURCE` selects `tendency` (add chemical production `CARMA_PSO4TOT*dt`) or `full_field` (use and return GMI's `CARMA_H2SO4` and `CARMA_HNO3`) (`CARMA_UtilMod.F90`, `CARMA_Emissions`; `CARMA_GridComp.F90`, CARMA_GridCompRun; `CARMAchem_GridCompMod.F90`, Initialize_).
